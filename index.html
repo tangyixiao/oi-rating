@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OI 校内模拟赛 Rating 系统</title>
+<style>
+:root{
+  --bg:#f3f4f6; --card:#fff; --text:#1f2937; --muted:#6b7280;
+  --border:#e5e7eb; --primary:#2563eb; --primary-d:#1d4ed8;
+  --green:#16a34a; --red:#dc2626; --radius:10px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+     background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+header{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;
+       display:flex;align-items:center;gap:32px;position:sticky;top:0;z-index:50;height:56px}
+.brand{font-weight:700;font-size:16px;white-space:nowrap}
+nav{display:flex;gap:4px;flex:1}
+.tab{background:none;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;
+     font-size:14px;color:var(--muted);font-family:inherit}
+.tab:hover{background:#f3f4f6;color:var(--text)}
+.tab.active{background:#eff6ff;color:var(--primary);font-weight:600}
+main{max-width:1200px;margin:0 auto;padding:20px}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:20px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:15px;font-weight:600}
+.muted{color:var(--muted);font-size:13px}
+.dropzone{border:2px dashed #cbd5e1;border-radius:var(--radius);padding:36px;text-align:center;
+          cursor:pointer;transition:.15s;background:#fafbfc}
+.dropzone:hover,.dropzone.over{border-color:var(--primary);background:#eff6ff}
+.dz-icon{font-size:32px;margin-bottom:8px}
+.link{color:var(--primary);text-decoration:underline}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#374151}
+input[type=text],input[type=date],input[type=number],select{
+  padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;
+  font-family:inherit;background:#fff;color:var(--text);outline:none;width:100%}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px #dbeafe}
+.btn{padding:8px 16px;border:1px solid var(--border);background:#fff;border-radius:8px;
+     cursor:pointer;font-size:14px;font-family:inherit;color:var(--text);transition:.15s}
+.btn:hover{background:#f9fafb;border-color:#d1d5db}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-d)}
+.btn.danger{color:var(--red);border-color:#fecaca}
+.btn.danger:hover{background:#fef2f2}
+.btn.small{padding:5px 10px;font-size:13px}
+.actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center}
+.table-wrap{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:8px}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+table.tbl th,table.tbl td{padding:8px 10px;text-align:left;border-bottom:1px solid #f1f5f9}
+table.tbl th{background:#f8fafc;font-weight:600;position:sticky;top:0;z-index:1;
+             font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:.3px}
+table.tbl tbody tr:hover{background:#f8fafc}
+table.tbl td.num,table.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
+.pos{color:var(--green);font-weight:600}
+.neg{color:var(--red);font-weight:600}
+.zero{color:var(--muted)}
+.rating{font-weight:700;font-variant-numeric:tabular-nums}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.contest-item{border:1px solid var(--border);border-radius:8px;padding:12px 14px;
+              margin-bottom:10px;background:#fff}
+.ci-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ci-name{font-weight:600;margin-bottom:2px}
+.ci-meta{font-size:12px;color:var(--muted)}
+.ci-actions{display:flex;gap:6px}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;
+       justify-content:center;z-index:100;padding:24px}
+.modal-box{background:#fff;border-radius:12px;max-width:1100px;width:100%;max-height:90vh;
+           display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.2)}
+.modal-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;
+            justify-content:space-between;align-items:center;font-weight:600}
+.modal-body{padding:16px 20px;overflow:auto}
+.close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);
+       line-height:1;padding:0 4px}
+.close:hover{color:var(--text)}
+.match-ok{color:var(--green)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;
+       color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:200;
+       opacity:0;transition:.25s;pointer-events:none}
+.toast.show{opacity:1}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .k{font-size:12px;color:var(--muted);margin-top:2px}
+select.sel-match{padding:5px 8px;font-size:12px;min-width:180px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;
+         padding-bottom:12px;border-bottom:1px solid #f1f5f9}
+.toolbar .spacer{flex:1}
+.rating-cell{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;width:100%}
+.rating-bar{display:inline-block;width:3px;height:14px;border-radius:2px;vertical-align:middle}
+.legend-name{font-weight:800;letter-spacing:.3px;
+             text-shadow:0 0 1px rgba(220,0,0,.45), 0 0 3px rgba(220,0,0,.18)}
+.legend-name .l1{color:#000}
+.legend-name .l2{color:#e11}
+@media (max-width: 680px) {
+  header { height:auto; padding:10px 12px; gap:8px; flex-wrap:wrap; }
+  nav { flex:none; width:100%; overflow-x:auto; }
+  .tab { white-space:nowrap; flex-shrink:0; padding:8px 12px; }
+  main { padding:12px; }
+  .card { padding:14px; }
+  .modal { padding:10px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">⚔️ OI 模拟赛 Rating</div>
+  <nav>
+    <button class="tab active" data-tab="import">导入成绩</button>
+    <button class="tab" data-tab="contests">比赛</button>
+    <button class="tab" data-tab="rating">总榜</button>
+    <button class="tab" data-tab="players">选手</button>
+    <button class="tab" data-tab="analysis">分析</button>
+    <button class="tab" data-tab="settings">设置</button>
+  </nav>
+</header>
+
+<main>
+
+<section class="panel active" id="panel-import">
+  <div class="card">
+    <h2>1. 上传成绩文件</h2>
+    <p class="muted" style="margin-top:-6px">支持 Lemon 导出的 result.html 和 CCR 导出的 CSV，自动识别 UTF-8 / GBK 编码。名字以 std 开头的选手会被自动剔除。</p>
+    <div class="dropzone" id="dropzone">
+      <div class="dz-icon">📁</div>
+      <div>拖拽文件到此处，或 <span class="link">点击选择文件</span></div>
+      <input type="file" id="fileInput" accept=".html,.htm,.csv,.txt" style="display:none">
+    </div>
+    <div id="parseStatus" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card" id="cardContest" style="display:none">
+    <h2>2. 比赛信息</h2>
+    <div class="grid">
+      <label>比赛名称<input type="text" id="cName"></label>
+      <label>比赛日期 <span style="color:var(--red);display:inline">*必填*</span>
+        <input type="date" id="cDate">
+      </label>
+      <label>Rating 权重（练习赛可设 0.5）<input type="number" id="cWeight" value="1" step="0.1" min="0.1" max="3"></label>
+    </div>
+    <p class="muted" style="margin-top:8px">⭐ Rating 按照日期先后顺序结算，必须填写正确的比赛日期。</p>
+  </div>
+
+  <div class="card" id="cardPreview" style="display:none">
+    <h2>3. 预览与选手匹配</h2>
+    <p class="muted" style="margin-top:-6px">确认数据无误；未自动匹配的选手请手动选择账号，或新建账号</p>
+    <div class="table-wrap" id="previewTable" style="margin-top:12px"></div>
+    <div class="actions">
+      <button class="btn primary" id="btnConfirm">✅ 确认导入并计算 Rating</button>
+      <button class="btn" id="btnCancel">取消</button>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="panel-contests">
+  <div class="card">
+    <h2>比赛列表（按日期倒序）</h2>
+    <div id="contestList"></div>
+  </div>
+</section>
+
+<section class="panel" id="panel-rating">
+  <div class="stat-row" id="statRow"></div>
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <h2 style="margin:0">排行榜</h2>
+      <div style="margin-left:auto;display:flex;gap:4px">
+        <button class="btn small" data-rating-mode="cur">当前 Rating</button>
+        <button class="btn small" data-rating-mode="max">最高 Rating</button>
+      </div>
+    </div>
+    <div class="table-wrap" id="ratingTable"></div>
+  </div>
+</section>
+
+<section class="panel" id="panel-players">
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <h2 style="margin:0">选手管理</h2>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn small primary" id="btnMergeUsers">🔗 合并两位选手</button>
+      </div>
+    </div>
+    <div class="table-wrap" id="playerTable"></div>
+  </div>
+</section>
+
+<section class="panel" id="panel-analysis">
+  <div class="stat-row" id="analysisStatRow"></div>
+
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <h2 style="margin:0">选手数据总表</h2>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="anSearch" placeholder="搜索选手…" style="width:130px">
+        <select id="anRoster" style="width:auto;min-width:150px">
+          <option value="active">只看现役（180 天内）</option>
+          <option value="all">全部选手</option>
+        </select>
+        <select id="anSort" style="width:auto;min-width:170px">
+          <option value="rating">排序：Rating</option>
+          <option value="beatRate">排序：胜率</option>
+          <option value="pairWinRate">排序：对局胜率</option>
+          <option value="avgRank">排序：平均名次</option>
+          <option value="podium">排序：前三次数</option>
+          <option value="wins">排序：夺冠次数</option>
+          <option value="akCount">排序：AK 次数</option>
+          <option value="avgPerf">排序：平均 Performance</option>
+          <option value="avgTotal">排序：场均总分</option>
+          <option value="matches">排序：参赛场次</option>
+          <option value="form5">排序：近 5 场净变化</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap" id="analysisTable"></div>
+    <p class="muted" id="analysisNote" style="margin-bottom:0"></p>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <h2 style="margin:0">选手画像</h2>
+      <div style="margin-left:auto">
+        <select id="anPlayer" style="width:auto;min-width:220px"></select>
+      </div>
+    </div>
+    <div id="analysisProfile"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <h2 style="margin:0">🩺 数据体检</h2>
+      <div style="margin-left:auto">
+        <button class="btn small" id="btnHealth2">重新扫描</button>
+      </div>
+    </div>
+    <p class="muted" style="margin-top:-6px">自动扫描重复导入、同名同日、样本过少、长期停赛等问题。只读，不会改动任何 Rating。</p>
+    <div id="healthBox"></div>
+  </div>
+</section>
+
+<section class="panel" id="panel-settings">
+  <div class="card">
+    <h2>Rating 参数</h2>
+    <div class="grid">
+      <label>初始 / 中心 Rating<input type="number" id="sInit" value="1500"></label>
+      <label>基础 K 值（每场变化幅度）<input type="number" id="sBaseK" value="200" step="8" min="16" max="512"></label>
+      <label>单场最大变化<input type="number" id="sMaxDelta" value="300"></label>
+      <label>Rating 下限<input type="number" id="sMin" value="0"></label>
+      <label>Rating 上限<input type="number" id="sMax" value="4000"></label>
+      <label>名次奖金权重（0~1）<input type="number" id="sNameBonus" value="0.5" step="0.1" min="0" max="1"></label>
+      <label>名次奖金随 Rating 变化强度（-1~1）<input type="number" id="sRatingSlope" value="0.5" step="0.1" min="-1" max="1"></label>
+      <label>🏆 领奖台奖励强度（0~2，越大前三差距越大）<input type="number" id="sPodiumBonus" value="0.6" step="0.1" min="0" max="2"></label>
+      <label>红黑名门槛（Rating ≥ 此值显示红黑名）<input type="number" id="sLegend" value="3000"></label>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="btnSaveSettings">保存并重算</button>
+    </div>
+    <p class="muted">
+      模型：Elo 变体 + 名次奖金 + <b>领奖台奖励</b> + 零和约束。<br>
+      · 距离中心 Rating 越远，K 系数越小（最低为中心的 30%），<b>低分和高分变化都会变慢</b>；<br>
+      · <b>名次奖金随当前 Rating 变化</b>：低分选手拿高名次奖励更多（追赶机制）；<br>
+      · <b>领奖台奖励</b>：第 1 名 100%、第 2 名 45%、第 3 名 15%、第 4 名往后 0%，用来拉开前三名的差距；<br>
+      · 每场涨跌总和强制为 0，不会集体掉分；<br>
+      · Rating ≥ 门槛时选手名显示为<b>红黑名</b>（首字母黑、其余红）。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>快照与回滚</h2>
+    <p class="muted" style="margin-top:-6px">每次导入、勘误、删除前都会自动存快照（最多 30 步），出问题可以一键回滚。</p>
+    <div class="actions">
+      <button class="btn" id="btnRollback">↩️ 回滚上一步修改</button>
+    </div>
+    <p class="muted" id="snapInfo"></p>
+  </div>
+
+  <div class="card">
+    <h2>数据管理</h2>
+    <div class="actions">
+      <button class="btn" id="btnExport">导出全部数据（JSON）</button>
+      <button class="btn" id="btnImportJson">导入 JSON 备份</button>
+      <input type="file" id="jsonInput" accept=".json" style="display:none">
+      <button class="btn danger" id="btnClear">清空所有数据</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>公开数据与本机修改</h2>
+    <p class="muted" style="margin-top:-6px">
+      初始榜单来自公开备份。导入成绩、修改选手和设置只保存在当前浏览器。
+      可导出 JSON 备份；更新公开榜单时，将备份替换到 GitHub 仓库的 data.json 并提交。
+    </p>
+    <div class="actions">
+      <button class="btn" id="btnCloudPull">重新载入公开数据</button>
+      <a class="btn" href="https://github.com/tangyixiao/oi-rating" target="_blank" rel="noopener noreferrer" style="text-decoration:none">GitHub 仓库</a>
+    </div>
+    <p class="muted" id="cloudStatus">正在读取公开数据…</p>
+  </div>
+
+</section>
+
+</main>
+
+<div class="modal" id="modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span id="modalTitle">标题</span>
+      <button class="close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+ *  0. 工具函数
+ * ============================================================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = s => { const m = String(s ?? '').replace(/,/g,'').match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; };
+const today = () => new Date().toISOString().slice(0,10);
+const isStdName = s => /^std/i.test(String(s ?? '').trim());
+
+function toast(msg, ms = 2200) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function ratingColor(r) {
+  if (r < 1200) return '#808080';
+  if (r < 1400) return '#008000';
+  if (r < 1600) return '#03a89e';
+  if (r < 1900) return '#0000ff';
+  if (r < 2100) return '#aa00aa';
+  if (r < 2400) return '#ff8c00';
+  return '#ff0000';
+}
+
+function colorBar(r, label) {
+  return `<span class="rating-cell">
+    <span class="rating-bar" style="background:${ratingColor(r)}"></span>
+    <b style="color:${ratingColor(r)}">${label}</b>
+  </span>`;
+}
+
+const LEGEND_THRESHOLD = 3000;
+
+function nameHtml(name, rating) {
+  const raw = String(name ?? '');
+  const thr = (typeof state !== 'undefined' && state?.settings?.legendThreshold) || LEGEND_THRESHOLD;
+  if (rating != null && rating >= thr && raw.length > 0) {
+    const first = esc(raw[0]);
+    const rest  = esc(raw.slice(1));
+    return `<span class="legend-name"><span class="l1">${first}</span><span class="l2">${rest}</span></span>`;
+  }
+  return `<span style="color:${ratingColor(rating ?? 0)}">${esc(raw)}</span>`;
+}
+
+/* ============================================================
+ *  1. 状态与持久化
+ * ============================================================ */
+const STORAGE_KEY = 'oi-rating-github-v1';
+
+const defaultState = () => ({
+  version: 5,
+  users: [],
+  contests: [],
+  nextUserId: 1,
+  nextContestId: 1,
+  settings: {
+    initialRating: 1500,
+    baseK: 200,
+    maxDelta: 300,
+    minRating: 0,
+    maxRating: 4000,
+    nameBonusRatio: 0.5,
+    ratingSlope: 0.5,
+    podiumBonusRatio: 0.6,
+    legendThreshold: 3000
+  }
+});
+
+let state = defaultState();
+let snapStack = [];
+let ratingMode = 'cur';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = Object.assign(defaultState(), JSON.parse(raw));
+    if (state.settings.legendThreshold == null) state.settings.legendThreshold = 3000;
+    if (state.settings.ratingSlope == null)     state.settings.ratingSlope = 0.5;
+    if (state.settings.podiumBonusRatio == null) state.settings.podiumBonusRatio = 0.6;
+  } catch (e) { console.error(e); }
+}
+function saveState() {
+  state.updatedAt = Date.now();
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY + '-dirty', '1');   // 本地有未上传的改动
+  }
+  catch (e) { console.error(e); }
+  scheduleCloudSave();
+}
+
+/* ============================================================
+ *  1.5 GitHub Pages：公开快照 + 浏览器本机编辑
+ * ============================================================ */
+const CLOUD = { api: 'data.json', online: false, dirty: false, updatedAt: 0 };
+
+function cloudStatusText() {
+  if (CLOUD.dirty) return '本机有修改：已保存在当前浏览器，可导出 JSON 备份';
+  if (CLOUD.online) return `公开数据快照 · 更新时间 ${new Date(CLOUD.updatedAt).toLocaleString()}`;
+  return '尚未读取公开数据；已有的本机数据仍然保留';
+}
+
+function renderCloudStatus() {
+  const el = $('cloudStatus');
+  if (el) el.textContent = cloudStatusText();
+}
+
+function canEdit() { return true; }
+
+async function cloudFetchData() {
+  try {
+    const r = await fetch(CLOUD.api, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (!data || !Array.isArray(data.users) || !Array.isArray(data.contests)) {
+      throw new Error('公开数据格式不正确');
+    }
+    CLOUD.online = true;
+    CLOUD.updatedAt = data.updatedAt || 0;
+    return data;
+  } catch (e) {
+    CLOUD.online = false;
+    toast('公开数据读取失败，已保留本机数据。请稍后在设置中重试。', 5000);
+    renderCloudStatus();
+    return null;
+  }
+}
+
+function scheduleCloudSave() {
+  CLOUD.dirty = true;
+  renderCloudStatus();
+}
+
+function adoptState(data) {
+  state = Object.assign(defaultState(), data);
+  state.settings = Object.assign(defaultState().settings, data.settings || {});
+}
+
+function usePublishedData(data) {
+  adoptState(data);
+  recalculateAll();
+  CLOUD.dirty = false;
+  localStorage.removeItem(STORAGE_KEY + '-dirty');
+  renderAll();
+  loadSettingsUI();
+  renderCloudStatus();
+}
+
+async function cloudBoot() {
+  CLOUD.dirty = localStorage.getItem(STORAGE_KEY + '-dirty') === '1';
+  renderCloudStatus();
+  const remote = await cloudFetchData();
+  if (remote && !CLOUD.dirty) usePublishedData(remote);
+  renderCloudStatus();
+}
+
+
+function snapshot() {
+  return JSON.stringify({
+    users: state.users, contests: state.contests,
+    nextUserId: state.nextUserId, nextContestId: state.nextContestId,
+    settings: state.settings
+  });
+}
+function pushSnapshot() {
+  snapStack.push(snapshot());
+  if (snapStack.length > 30) snapStack.shift();
+  renderSnapInfo();
+}
+function rollback() {
+  if (!snapStack.length) { toast('没有可回滚的快照'); return; }
+  const raw = snapStack.pop();
+  state = Object.assign(defaultState(), JSON.parse(raw));
+  if (state.settings.legendThreshold == null)  state.settings.legendThreshold = 3000;
+  if (state.settings.ratingSlope == null)      state.settings.ratingSlope = 0.5;
+  if (state.settings.podiumBonusRatio == null) state.settings.podiumBonusRatio = 0.6;
+  recalculateAll();
+  renderAll();
+  renderSnapInfo();
+  toast('已回滚到修改前');
+}
+function renderSnapInfo() {
+  const el = $('snapInfo');
+  if (el) el.textContent = `当前快照栈深度：${snapStack.length} / 30`;
+}
+
+const findUser = id => state.users.find(u => u.id === id) || null;
+
+function findUserByName(name) {
+  const n = String(name ?? '').trim();
+  if (!n) return null;
+  for (const u of state.users) {
+    if (u.name === n) return u;
+    if (u.aliases && u.aliases.includes(n)) return u;
+  }
+  return null;
+}
+
+function createUser(name) {
+  const u = {
+    id: state.nextUserId++,
+    name: String(name).trim() || `选手${state.nextUserId}`,
+    aliases: [],
+    initialRating: state.settings.initialRating,
+    rating: state.settings.initialRating,
+    maxRating: state.settings.initialRating,
+    matches: 0,
+    createdAt: Date.now()
+  };
+  state.users.push(u);
+  return u;
+}
+
+/* ============================================================
+ *  2. Rating 算法
+ * ============================================================
+ *  ★ 领奖台奖励：给前三名额外加成，拉开 rk1/rk2/rk3 的差距
+ *     podiumOf(rank) = { 1: 1.00, 2: 0.45, 3: 0.15, else: 0 }
+ *     podiumPart = baseK * podiumBonusRatio * podiumOf(rank)
+ * ============================================================ */
+function computeRatingChanges(ratings, ranks, opts = {}) {
+  const n = ratings.length;
+  const baseK            = opts.baseK            ?? 200;
+  const maxDelta         = opts.maxDelta         ?? 300;
+  const center           = opts.center           ?? 1500;
+  const minRatio         = opts.minRatio         ?? 0.3;
+  const spread           = opts.spread           ?? 1200;
+  const nameBonusRatio   = opts.nameBonusRatio   ?? 0.5;
+  const ratingSlope      = opts.ratingSlope      ?? 0.5;
+  const podiumBonusRatio = opts.podiumBonusRatio ?? 0.6;
+
+  if (n === 0) return { perfs: [], deltas: [] };
+  if (n === 1) return { perfs: [ratings[0]], deltas: [0] };
+
+  const win = (ra, rb) => 1 / (1 + Math.pow(10, (rb - ra) / 400));
+
+  const kOf = r => {
+    const t = Math.min(1, Math.abs(r - center) / spread);
+    return baseK * (1 - (1 - minRatio) * t * t);
+  };
+
+  const bonusScaleOf = r => {
+    const t = (r - center) / spread;
+    return Math.max(0.3, Math.min(1.8, 1 - t * ratingSlope));
+  };
+
+  // ★ 领奖台奖励系数
+  const podiumOf = rank => {
+    if (rank === 1) return 1.00;
+    if (rank === 2) return 0.45;
+    if (rank === 3) return 0.15;
+    return 0;
+  };
+
+  const actual = ranks.map(r => (n - r) / (n - 1));
+
+  const expected = ratings.map((ri, i) => {
+    let s = 0;
+    for (let j = 0; j < n; j++) if (j !== i) s += win(ri, ratings[j]);
+    return s / (n - 1);
+  });
+
+  let deltas = ratings.map((r, i) => {
+    const eloPart    = kOf(r) * (actual[i] - expected[i]);
+    const namePart   = baseK * nameBonusRatio * bonusScaleOf(r) * (actual[i] - 0.5);
+    const podiumPart = baseK * podiumBonusRatio * podiumOf(ranks[i]);
+    return eloPart + namePart + podiumPart;
+  });
+
+  const firstIdx = ranks.indexOf(1);
+  if (firstIdx >= 0 && deltas[firstIdx] < 0) deltas[firstIdx] = 0;
+
+  const mean = deltas.reduce((a, b) => a + b, 0) / n;
+  deltas = deltas.map(d => d - mean);
+
+  deltas = deltas.map(d => Math.max(-maxDelta, Math.min(maxDelta, d)));
+
+  const rMin = Math.min(...ratings);
+  const rMax = Math.max(...ratings);
+  const lo0 = rMin - 800, hi0 = rMax + 800;
+
+  const perfs = ratings.map((_, i) => {
+    const target = actual[i];
+    let lo = lo0, hi = hi0;
+    for (let it = 0; it < 60; it++) {
+      const mid = (lo + hi) / 2;
+      let s = 0;
+      for (let j = 0; j < n; j++) if (j !== i) s += win(mid, ratings[j]);
+      const avg = s / (n - 1);
+      if (avg < target) lo = mid;
+      else               hi = mid;
+    }
+    return (lo + hi) / 2;
+  });
+
+  return { perfs, deltas };
+}
+
+function assignRanks(results) {
+  results.sort((a, b) => b.total - a.total);
+  let rank = 0, prev = null;
+  results.forEach((r, i) => {
+    if (prev === null || r.total < prev) { rank = i + 1; prev = r.total; }
+    r.rank = rank;
+  });
+}
+
+function recalculateAll() {
+  const S = state.settings;
+
+  for (const u of state.users) {
+    u.rating = u.initialRating;
+    u.maxRating = u.initialRating;
+    u.matches = 0;
+  }
+  for (const c of state.contests) {
+    for (const r of c.results) {
+      r.performance = null; r.ratingBefore = null; r.ratingAfter = null; r.delta = null;
+    }
+  }
+
+  const contests = [...state.contests].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id
+  );
+
+  for (const c of contests) {
+    const results = c.results.filter(r => findUser(r.userId));
+    if (!results.length) continue;
+
+    assignRanks(results);
+
+    const ratings = results.map(r => findUser(r.userId).rating);
+    const ranks   = results.map(r => r.rank);
+    const w       = (c.weight == null ? 1 : c.weight);
+
+    const { perfs, deltas } = computeRatingChanges(ratings, ranks, {
+      baseK:            S.baseK,
+      maxDelta:         S.maxDelta,
+      center:           S.initialRating,
+      minRatio:         0.3,
+      spread:           1200,
+      nameBonusRatio:   S.nameBonusRatio,
+      ratingSlope:      S.ratingSlope,
+      podiumBonusRatio: S.podiumBonusRatio
+    });
+
+    results.forEach((r, i) => {
+      const u = findUser(r.userId);
+      const before = u.rating;
+
+      let delta = deltas[i] * w;
+      delta = Math.max(-S.maxDelta, Math.min(S.maxDelta, delta));
+
+      let after = Math.round(before + delta);
+      after = Math.max(S.minRating, Math.min(S.maxRating, after));
+      delta = after - before;
+
+      r.performance  = perfs[i];
+      r.ratingBefore = before;
+      r.ratingAfter  = after;
+      r.delta        = delta;
+
+      u.rating    = after;
+      u.maxRating = Math.max(u.maxRating, after);
+      u.matches  += 1;
+    });
+  }
+
+  saveState();
+}
+
+/* ============================================================
+ *  3. 文件解析
+ * ============================================================ */
+function decodeBytes(buffer) {
+  const bytes = new Uint8Array(buffer);
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch (e) {}
+  try { return new TextDecoder('gbk').decode(bytes); } catch (e) {}
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+function parseLemonHTML(html, fileName) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const tables = [...doc.querySelectorAll('table')];
+  if (!tables.length) throw new Error('未在文件中找到 <table>，请确认是 Lemon 导出的 result.html');
+
+  let best = null, bestScore = -Infinity;
+  for (const t of tables) {
+    const trs = [...t.querySelectorAll('tr')];
+    if (trs.length < 2) continue;
+    const headers = [...trs[0].querySelectorAll('th,td')].map(c => c.textContent.trim());
+    const htext = headers.join(' ');
+    let score = 0;
+    if (/(排名|名次|rank|序号)/i.test(htext)) score += 20;
+    if (/(名称|姓名|选手|user|name|handle|账号|帐号)/i.test(htext)) score += 20;
+    if (/(总分|总成绩|total|score|成绩)/i.test(htext)) score += 20;
+    score += Math.min(headers.length, 10) * 0.5;
+    score += Math.min(trs.length, 100) * 0.01;
+    if (t.closest('div[id]')) score -= 100;
+    if (score > bestScore) { bestScore = score; best = { headers, trs }; }
+  }
+  if (!best) throw new Error('未找到有效的成绩表');
+
+  const { headers, trs } = best;
+  const N = headers.length;
+  const used = new Array(N).fill(false);
+  const col = { rank: -1, name: -1, school: -1, total: -1, problems: [] };
+
+  const tryAssign = (key, re) => {
+    if (col[key] >= 0) return;
+    for (let i = 0; i < N; i++) {
+      if (used[i]) continue;
+      const t = headers[i].trim();
+      if (t && re.test(t)) { col[key] = i; used[i] = true; return; }
+    }
+  };
+
+  tryAssign('rank',   /^(排名|名次|rank|no\.?|#|序号)$/i);
+  tryAssign('total',  /^(总分|总成绩|总计|total|score|成绩|得分)$/i);
+  tryAssign('school', /^(学校|单位|班级|school|team|org|组织)$/i);
+  tryAssign('name',   /(名称|姓名|选手|用户|昵称|玩家|name|user|handle|账号|帐号)/i);
+
+  if (col.name < 0) {
+    for (let i = 0; i < N; i++) {
+      if (used[i]) continue;
+      const t = headers[i].trim();
+      if (!t) continue;
+      if (/^\d+(\.\d+)?$/.test(t)) continue;
+      col.name = i; used[i] = true;
+      break;
+    }
+  }
+  if (col.name < 0) throw new Error('无法识别"选手姓名"列');
+
+  for (let i = 0; i < N; i++) if (!used[i]) col.problems.push(i);
+
+  let rows = [];
+  for (const tr of trs.slice(1)) {
+    const cells = [...tr.querySelectorAll('td,th')];
+    if (cells.length < 2) continue;
+    const texts = [];
+    for (let i = 0; i < N; i++) texts.push(cells[i] ? cells[i].textContent.trim() : '');
+    const name = texts[col.name] || '';
+    if (!name) continue;
+    if (/^(总计|平均|合计|total|average)$/i.test(name)) continue;
+    const total = col.total >= 0
+      ? num(texts[col.total])
+      : col.problems.reduce((s, i) => s + num(texts[i]), 0);
+    rows.push({
+      name,
+      school: col.school >= 0 ? texts[col.school] : '',
+      rank:   col.rank   >= 0 ? Math.round(num(texts[col.rank])) || null : null,
+      total,
+      scores: col.problems.map(i => num(texts[i])),
+      raw: texts
+    });
+  }
+
+  rows = rows.filter(r => !isStdName(r.name));
+  if (!rows.length) throw new Error('成绩表中没有解析到有效数据行');
+
+  let contestName = (doc.querySelector('title')?.textContent || '').trim();
+  contestName = contestName.replace(/\s*[:：]\s*.*$/, '').trim();
+  if (!contestName) contestName = fileName.replace(/\.(html?|htm)$/i, '');
+
+  return {
+    source: 'lemon_html',
+    contestName,
+    problems: col.problems.map(i => headers[i] || `P${i}`),
+    rows
+  };
+}
+
+function parseCSV(text) {
+  const firstLine = (text.split(/\r?\n/).find(l => l.trim()) || '');
+  const cand = { ',': 0, '\t': 0, ';': 0, '|': 0 };
+  for (const ch of firstLine) if (cand[ch] !== undefined) cand[ch]++;
+  let delim = ',', mx = -1;
+  for (const k in cand) if (cand[k] > mx) { mx = cand[k]; delim = k; }
+
+  const rows = [];
+  let cur = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; }
+        else inQ = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === delim) { cur.push(field); field = ''; }
+      else if (c === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; }
+      else if (c === '\r') {}
+      else field += c;
+    }
+  }
+  if (field !== '' || cur.length) { cur.push(field); rows.push(cur); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+
+function parseCCRCSV(text, fileName) {
+  const grid = parseCSV(text);
+  if (grid.length < 2) throw new Error('CSV 内容为空或只有表头');
+
+  const headers = grid[0].map(h => String(h).trim());
+  const N = headers.length;
+  const used = new Array(N).fill(false);
+  const col = { rank: -1, name: -1, school: -1, total: -1, problems: [] };
+
+  const tryAssign = (key, re) => {
+    if (col[key] >= 0) return;
+    for (let i = 0; i < N; i++) {
+      if (used[i]) continue;
+      if (re.test(headers[i])) { col[key] = i; used[i] = true; return; }
+    }
+  };
+
+  tryAssign('rank',   /^(排名|名次|rank|no\.?|#|序号)$/i);
+  tryAssign('total',  /^(总分|总成绩|总计|total|score|成绩|得分)$/i);
+  tryAssign('school', /^(学校|单位|班级|school|team|org|组织)$/i);
+  tryAssign('name',   /(名称|姓名|选手|用户|昵称|玩家|name|user|handle|账号|帐号)/i);
+
+  if (col.name < 0) {
+    for (let i = 0; i < N; i++) {
+      if (used[i]) continue;
+      if (/^\d+(\.\d+)?$/.test(headers[i])) continue;
+      col.name = i; used[i] = true;
+      break;
+    }
+  }
+  if (col.name < 0) throw new Error('无法识别"选手姓名"列');
+
+  for (let i = 0; i < N; i++) if (!used[i]) col.problems.push(i);
+
+  let rows = [];
+  for (const line of grid.slice(1)) {
+    const name = String(line[col.name] ?? '').trim();
+    if (!name) continue;
+    if (/^(总计|平均|合计|total|average)$/i.test(name)) continue;
+    const total = col.total >= 0
+      ? num(line[col.total])
+      : col.problems.reduce((s, i) => s + num(line[i]), 0);
+    rows.push({
+      name,
+      school: col.school >= 0 ? String(line[col.school] ?? '').trim() : '',
+      rank: col.rank >= 0 ? Math.round(num(line[col.rank])) || null : null,
+      total,
+      scores: col.problems.map(i => num(line[i])),
+      raw: line
+    });
+  }
+
+  rows = rows.filter(r => !isStdName(r.name));
+  if (!rows.length) throw new Error('CSV 中没有解析到有效数据行');
+
+  return {
+    source: 'ccr_csv',
+    contestName: fileName.replace(/\.(csv|txt)$/i, ''),
+    problems: col.problems.map(i => headers[i] || `P${i}`),
+    rows
+  };
+}
+
+/* ============================================================
+ *  4. 导入流程
+ * ============================================================ */
+let pending = null;
+
+async function handleFile(file) {
+  if (!canEdit()) return;
+  $('parseStatus').innerHTML = '<span class="muted">正在解析…</span>';
+  try {
+    const buf = await file.arrayBuffer();
+    const text = decodeBytes(buf);
+    let parsed;
+    if (/<table[\s>]/i.test(text)) parsed = parseLemonHTML(text, file.name);
+    else parsed = parseCCRCSV(text, file.name);
+
+    pending = {
+      source: parsed.source,
+      contestName: parsed.contestName || `模拟赛 ${today()}`,
+      date: '',
+      weight: 1,
+      problems: parsed.problems,
+      rows: parsed.rows.map(r => {
+        const auto = findUserByName(r.name);
+        return { ...r, userId: auto ? auto.id : null, action: auto ? 'link' : 'new' };
+      })
+    };
+
+    const matched = pending.rows.filter(r => r.action === 'link').length;
+    $('parseStatus').innerHTML =
+      `<span class="match-ok">✔ 解析成功</span>　来源：${parsed.source === 'lemon_html' ? 'Lemon HTML' : 'CCR CSV'}　` +
+      `共 ${pending.rows.length} 条记录（已过滤 std 选手），自动匹配 ${matched} 人，待确认 ${pending.rows.length - matched} 人`;
+
+    $('cName').value   = pending.contestName;
+    $('cDate').value   = '';
+    $('cWeight').value = 1;
+
+    $('cardContest').style.display = 'block';
+    $('cardPreview').style.display = 'block';
+    renderPreview();
+    $('cardContest').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error(err);
+    $('parseStatus').innerHTML = `<span style="color:var(--red)">✖ 解析失败：${esc(err.message)}</span>`;
+    $('cardContest').style.display = 'none';
+    $('cardPreview').style.display = 'none';
+  }
+}
+
+function renderPreview() {
+  if (!pending) return;
+  const users = [...state.users].sort((a, b) => a.name.localeCompare(b.name, 'zh'));
+
+  const head = `<tr>
+    <th class="num">#</th>
+    <th>原始姓名</th>
+    <th>学校</th>
+    ${pending.problems.map(p => `<th class="num">${esc(p)}</th>`).join('')}
+    <th class="num">总分</th>
+    <th>匹配选手</th>
+  </tr>`;
+
+  const body = pending.rows.map((r, i) => {
+    const opts = [];
+    opts.push(`<option value="__new__" ${r.action === 'new' ? 'selected' : ''}>➕ 新建选手「${esc(r.name)}」</option>`);
+    for (const u of users) {
+      opts.push(`<option value="${u.id}" ${r.action === 'link' && r.userId === u.id ? 'selected' : ''}>${esc(u.name)} (${u.rating})</option>`);
+    }
+    opts.push(`<option value="__skip__" ${r.action === 'skip' ? 'selected' : ''}>⛔ 跳过此条</option>`);
+    return `<tr>
+      <td class="num">${i + 1}</td>
+      <td><b>${esc(r.name)}</b></td>
+      <td>${esc(r.school || '-')}</td>
+      ${r.scores.map(s => `<td class="num">${s}</td>`).join('')}
+      <td class="num"><b>${r.total}</b></td>
+      <td><select class="sel-match" data-idx="${i}">${opts.join('')}</select></td>
+    </tr>`;
+  }).join('');
+
+  $('previewTable').innerHTML = `<table class="tbl"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+
+  $('previewTable').querySelectorAll('select.sel-match').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const idx = parseInt(e.target.dataset.idx, 10);
+      const val = e.target.value;
+      const row = pending.rows[idx];
+      if (val === '__new__')      { row.action = 'new';  row.userId = null; }
+      else if (val === '__skip__'){ row.action = 'skip'; row.userId = null; }
+      else                        { row.action = 'link'; row.userId = parseInt(val, 10); }
+    });
+  });
+}
+
+function confirmImport() {
+  if (!canEdit()) return;
+  if (!pending) return;
+
+  const date = $('cDate').value;
+  if (!date) {
+    toast('请先填写比赛日期（Rating 按日期排序结算）');
+    $('cDate').focus();
+    return;
+  }
+
+  const name = $('cName').value.trim() || `模拟赛 ${date}`;
+  const weight = parseFloat($('cWeight').value) || 1;
+
+  // 重复导入拦截：同名 + 同日期 + 同题目（不影响 Rating 算法，只是防误操作）
+  const dup = state.contests.find(x =>
+    x.date === date && x.name === name &&
+    (x.problems || []).join('|') === (pending.problems || []).join('|'));
+  if (dup && !confirm(
+      `已存在同名、同日期、题目相同的比赛：\n  「${dup.name}」 ${dup.date}（${dup.results.length} 人）\n\n` +
+      `再导入一次会让这些选手被重复计分。确定仍要导入吗？`)) {
+    toast('已取消导入');
+    return;
+  }
+
+  pushSnapshot();
+
+  const contest = {
+    id: state.nextContestId++,
+    name, date, weight,
+    source: pending.source,
+    problems: [...pending.problems],
+    results: [],
+    createdAt: Date.now()
+  };
+
+  const used = new Set();
+  let added = 0;
+
+  pending.rows.forEach(row => {
+    if (row.action === 'skip') return;
+    if (isStdName(row.name)) return;
+
+    let uid = row.userId;
+    if (row.action === 'new') uid = createUser(row.name).id;
+    if (!uid) return;
+    if (used.has(uid)) { toast(`选手「${row.name}」在本场重复出现，已合并`); return; }
+    used.add(uid);
+
+    const u = findUser(uid);
+    if (u && row.name && u.name !== row.name && !u.aliases.includes(row.name)) {
+      u.aliases.push(row.name);
+    }
+
+    contest.results.push({
+      userId: uid, rawName: row.name, rank: 0,
+      total: row.total, scores: [...row.scores],
+      performance: null, ratingBefore: null, ratingAfter: null, delta: null
+    });
+    added++;
+  });
+
+  if (!added) {
+    snapStack.pop(); renderSnapInfo();
+    toast('没有可导入的记录');
+    return;
+  }
+
+  assignRanks(contest.results);
+  state.contests.push(contest);
+  recalculateAll();
+
+  pending = null;
+  resetImportUI();
+  renderAll();
+  switchTab('contests');
+  showContest(contest.id);
+  toast(`已导入「${name}」，共 ${added} 人`);
+}
+
+function resetImportUI() {
+  $('cardContest').style.display = 'none';
+  $('cardPreview').style.display = 'none';
+  $('parseStatus').innerHTML = '';
+  $('fileInput').value = '';
+  $('previewTable').innerHTML = '';
+}
+
+/* ============================================================
+ *  4.5 统计与分析（只读，不参与 Rating 计算）
+ * ============================================================ */
+const ROSTER_DAYS = 180;      // 现役口径：最后一场比赛起算 180 天内有参赛
+
+/* 题位难度顺序：按「全场满分率」给每道题排序（高→低 = 易→难）
+   满分率 = 该题得分 ≥ 90 的人数比例（＝"做出来了"的比例）。
+   满分率相同时，用全场平均得分率兜底（避免"人人 0 分"和"人人 30 分"分不出来）。
+   说明：题目是每题 100 分制；实测约 1/3 的比赛"列序=难度序"，所以不能用列号当 P1~P4。 */
+let DIFF_CACHE = {};
+function diffOrderOf(c) {
+  if (DIFF_CACHE[c.id]) return DIFF_CACHE[c.id];
+  const res = c.results || [];
+  const ncol = res.reduce((m, r) => Math.max(m, (r.scores || []).length), 0);
+  const cols = [];
+  for (let j = 0; j < ncol; j++) {
+    let att = 0, pass = 0, full = 0, sum = 0;
+    for (const r of res) {
+      const sc = r.scores || [];
+      if (j >= sc.length) continue;
+      att++; sum += sc[j];
+      if (sc[j] > 0) pass++;
+      if (sc[j] >= 90) full++;
+    }
+    const avg = att ? sum / att : 0;
+    cols.push({
+      col: j, att,
+      fullRate: att ? full / att : 0,       // 满分率 ← 排序用这个
+      avgRate:  avg / 100,                  // 平均得分率（排序兜底）
+      passRate: att ? pass / att : 0        // 有分率（得分 > 0）
+    });
+  }
+  cols.sort((a, b) => (b.fullRate - a.fullRate) || (b.avgRate - a.avgRate));
+  DIFF_CACHE[c.id] = { ncol, cols };
+  return DIFF_CACHE[c.id];
+}
+
+function sortedContests() {
+  return [...state.contests].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id);
+}
+
+/* 数据里最后一场比赛的日期（判断现役/停赛、作为"停赛天数"的基准） */
+function latestDate() {
+  let d = '';
+  for (const c of state.contests) if (c.date > d) d = c.date;
+  return d;
+}
+function daysBetween(a, b) {
+  const t0 = Date.parse(a + 'T00:00:00Z'), t1 = Date.parse(b + 'T00:00:00Z');
+  if (!isFinite(t0) || !isFinite(t1)) return null;
+  return Math.round((t1 - t0) / 86400000);
+}
+/* 场次越少分越不可信：粗估不确定度 */
+function uncertaintyOf(u) {
+  if (!u.matches) return null;
+  return Math.max(20, Math.round(320 / Math.sqrt(u.matches)));
+}
+
+/* 某选手的全部参赛记录（按时间升序） */
+function userHistory(uid) {
+  const out = [];
+  for (const c of sortedContests()) {
+    const r = c.results.find(x => x.userId === uid);
+    if (r) out.push({ contest: c, result: r, n: c.results.length });
+  }
+  return out;
+}
+
+/* 核心统计：胜率、名次、Performance、题位通过率、交手战绩 */
+function computeStats(uid, h) {
+  h = h || userHistory(uid);
+  const base = { matches: h.length };
+  if (!h.length) return base;
+
+  const ranks = h.map(x => x.result.rank);
+  const totals = h.map(x => x.result.total);
+  const perfs = h.map(x => x.result.performance).filter(v => v != null);
+  const deltas = h.map(x => x.result.delta ?? 0);
+  // 击败率：本场击败的对手比例（比你名次靠后的人数 / 总对手数）
+  const beats = h.map(x => x.n > 1 ? (x.n - x.result.rank) / (x.n - 1) : 1);
+  // 对局胜率：把每场的 (胜, 负) 展开统计（并列名次算平）
+  let pairsW = 0, pairsL = 0, pairsT = 0;
+
+  // 各题位统计（按「全场满分率」排序后的第 k 容易题，k=0..3）
+  const posAtt = [0, 0, 0, 0];          // 作答场次
+  const posSol = [0, 0, 0, 0];          // 有分（>0）
+  const posFull = [0, 0, 0, 0];         // 满分（>=90）
+  const posMyScore = [0, 0, 0, 0];      // 我的总分累计（算得分率，仅备用）
+  const posFieldFull = [0, 0, 0, 0];    // 全场满分率累计
+  const h2h = {};
+
+  for (const x of h) {
+    const sc = x.result.scores || [];
+    const diff = diffOrderOf(x.contest);
+    for (let k = 0; k < Math.min(4, diff.cols.length); k++) {
+      const c0 = diff.cols[k];
+      if (c0.col >= sc.length) continue;      // 这场没这么多题
+      posAtt[k]++;
+      posFieldFull[k] += c0.fullRate;
+      posMyScore[k] += sc[c0.col];
+      if (sc[c0.col] > 0) posSol[k]++;
+      if (sc[c0.col] >= 90) posFull[k]++;
+    }
+    for (const r of x.contest.results) {
+      if (r.userId === uid) continue;
+      if (x.result.rank < r.rank) { pairsW++; (h2h[r.userId] = h2h[r.userId] || { w: 0, l: 0, t: 0 }).w++; }
+      else if (x.result.rank > r.rank) { pairsL++; (h2h[r.userId] = h2h[r.userId] || { w: 0, l: 0, t: 0 }).l++; }
+      else { pairsT++; (h2h[r.userId] = h2h[r.userId] || { w: 0, l: 0, t: 0 }).t++; }
+    }
+  }
+
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+  const n = h.length;
+  return {
+    matches: n,
+    first: h[0].contest.date,
+    last: h[n - 1].contest.date,
+    fresh: h.slice(-5),
+    beatRate: avg(beats),                                   // 平均击败对手比例 = 胜率(按对手数加权)
+    pairWinRate: (pairsW + pairsL) ? pairsW / (pairsW + pairsL) : null,  // 对局胜率(不含平)
+    pairsW, pairsL, pairsT,
+    avgRank: avg(ranks),
+    bestRank: Math.min(...ranks),
+    worstRank: Math.max(...ranks),
+    podium: ranks.filter(r => r <= 3).length,
+    wins: ranks.filter(r => r === 1).length,
+    podiumRate: ranks.filter(r => r <= 3).length / n,
+    top10: ranks.filter(r => r <= 10).length,
+    avgTotal: avg(totals),
+    bestTotal: Math.max(...totals),
+    avgPerf: perfs.length ? avg(perfs) : null,
+    bestPerf: perfs.length ? Math.max(...perfs) : null,
+    avgField: avg(h.map(x => x.n)),
+    avgDelta: deltas.reduce((a, b) => a + b, 0) / n,
+    form5: deltas.slice(-5).reduce((a, b) => a + b, 0),
+    akCount: h.filter(x => { const sc = x.result.scores || []; return sc.length && sc.every(s => s >= 90); }).length,
+    posRate: [0, 1, 2, 3].map(j => posAtt[j] ? posSol[j] / posAtt[j] : null),
+    posFullRate: [0, 1, 2, 3].map(j => posAtt[j] ? posFull[j] / posAtt[j] : null),
+    posFieldRate: [0, 1, 2, 3].map(j => posAtt[j] ? posFieldFull[j] / posAtt[j] : null),
+    posMyRate: [0, 1, 2, 3].map(j => posAtt[j] ? posFull[j] / posAtt[j] : null),
+    posScoreRate: [0, 1, 2, 3].map(j => posAtt[j] ? posMyScore[j] / (100 * posAtt[j]) : null),
+    posAtt,
+    h2h
+  };
+}
+
+/* 某场比赛的强度指标 */
+function contestStats(c) {
+  const res = c.results || [];
+  const ratings = res.map(r => r.ratingBefore).filter(v => typeof v === 'number');
+  const perfs = res.map(r => r.performance).filter(v => v != null);
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  return {
+    n: res.length,
+    avgRating: avg(ratings),
+    avgPerf: avg(perfs),
+    top: res.length ? Math.max(...ratings) : null
+  };
+}
+
+/* 统一索引：每次渲染只算一遍（renderAll 开头会把缓存清空） */
+let ANALYSIS = null;
+function analysisIndex() {
+  if (ANALYSIS) return ANALYSIS;
+  const end = latestDate();
+  const last = {}, hist = {}, stats = {}, cstats = {};
+  const ordered = sortedContests();
+  for (const c of state.contests) cstats[c.id] = contestStats(c);
+  for (const u of state.users) {
+    const h = [];
+    for (const c of ordered) {
+      const r = c.results.find(x => x.userId === u.id);
+      if (r) h.push({ contest: c, result: r, n: c.results.length });
+    }
+    hist[u.id] = h;
+    stats[u.id] = computeStats(u.id, h);
+    last[u.id] = h.length ? h[h.length - 1].contest.date : null;
+  }
+  ANALYSIS = { end, last, hist, stats, cstats };
+  return ANALYSIS;
+}
+function userStats(uid) {
+  const idx = analysisIndex();
+  return idx.stats[uid] || computeStats(uid, []);
+}
+
+/* 最后一次参赛日期（纯读取，不改动数据） */
+function lastPlayedDate(uid) {
+  let d = '';
+  for (const c of state.contests) {
+    if (c.date > d && c.results.some(r => r.userId === uid)) d = c.date;
+  }
+  return d || null;
+}
+
+function statusOf(u) {
+  const idx = analysisIndex();
+  const last = idx.last[u.id];
+  const gap = last ? daysBetween(last, idx.end) : null;
+  if (gap != null && gap > ROSTER_DAYS) return { t: `停赛 ${gap} 天`, cls: 'muted' };
+  if (u.matches && u.matches < 6) return { t: `样本少（${u.matches} 场）`, cls: 'neg' };
+  return { t: '现役', cls: 'pos' };
+}
+function isActiveUser(u) {
+  const idx = analysisIndex();
+  const last = idx.last[u.id];
+  const gap = last ? daysBetween(last, idx.end) : null;
+  return gap != null && gap <= ROSTER_DAYS;
+}
+const pct = (v, d = 1) => v == null ? '-' : (100 * v).toFixed(d) + '%';
+const f1 = v => v == null ? '-' : (Math.round(v * 10) / 10).toFixed(1);
+const f0 = v => v == null ? '-' : Math.round(v);
+
+/* 数据体检：找出重复导入、同名同日、悬空成绩等隐患（只读，不改数据） */
+function dataHealth() {
+  const issues = [];
+  const key = c => c.date + '|' + c.name + '|' + (c.problems || []).join('|');
+
+  // 1) 同一场比赛被导入两次（同名 + 同日期 + 同题目）
+  const byKey = {};
+  for (const c of state.contests) (byKey[key(c)] = byKey[key(c)] || []).push(c);
+  for (const k in byKey) {
+    if (byKey[k].length > 1) {
+      issues.push(['重复导入', `「${byKey[k][0].name}」 ${byKey[k][0].date} 存在 ${byKey[k].length} 份完全相同的比赛`
+        + `（id ${byKey[k].map(c => c.id).join(', ')}，各 ${byKey[k].map(c => c.results.length).join('/')} 人）→ 建议删除多余的那份`]);
+    }
+  }
+  // 2) 同名同日但题目不同
+  const byDate = {};
+  for (const c of state.contests) (byDate[c.date] = byDate[c.date] || []).push(c);
+  for (const d in byDate) {
+    if (byDate[d].length > 1) {
+      const names = byDate[d].map(c => c.name);
+      const sameName = names.some((n, i) => names.indexOf(n) !== i);
+      issues.push([sameName ? '同名同日' : '同日多场',
+        `${d} 有 ${byDate[d].length} 场比赛：` + byDate[d].map(c => `id ${c.id}「${c.name}」${c.results.length} 人`).join('、')
+        + (sameName ? ' → 同时导入顺序会影响结算，建议改名加序号' : '')]);
+    }
+  }
+  // 3) 悬空成绩（选手已被删除）
+  const orphan = [];
+  for (const c of state.contests) for (const r of c.results) if (!findUser(r.userId)) orphan.push(`${c.name}(${c.date}) userId=${r.userId}`);
+  if (orphan.length) issues.push(['悬空成绩', `${orphan.length} 条成绩找不到对应选手：` + orphan.slice(0, 8).join('、')]);
+
+  // 4) 别名 / 显示名冲突
+  const seen = {};
+  for (const u of state.users) {
+    const names = [u.name, ...(u.aliases || [])];
+    for (const nm of names) {
+      if (!nm) continue;
+      if (seen[nm] && seen[nm] !== u.id) issues.push(['名称冲突', `「${nm}」同时属于 ${findUser(seen[nm]).name} 和 ${u.name} → 导入时可能匹配错人`]);
+      else seen[nm] = u.id;
+    }
+  }
+  // 5) 场次与成绩条数不一致
+  const cnt = {};
+  for (const c of state.contests) for (const r of c.results) cnt[r.userId] = (cnt[r.userId] || 0) + 1;
+  for (const u of state.users) {
+    if ((cnt[u.id] || 0) !== u.matches) issues.push(['场次不符', `${u.name}：记录的场次 ${u.matches}，实际成绩 ${cnt[u.id] || 0} 条 → 点一次「保存并重算」即可修正`]);
+  }
+  // 6) 单场权重异常
+  for (const c of state.contests) {
+    if (c.weight > 2) issues.push(['权重偏高', `「${c.name}」${c.date} 权重 ${c.weight}（单场变化会被放大，且容易全部撞到上限 ±${state.settings.maxDelta}）`]);
+  }
+  // 7) 样本过少 / 长期停赛却仍在榜
+  const end = latestDate();
+  const few = state.users.filter(u => u.matches > 0 && u.matches <= 2).map(u => `${u.name}(${u.matches}场)`);
+  if (few.length) issues.push(['样本过少', `${few.length} 人参赛 ≤2 场，分数基本不可信：` + few.join('、')]);
+  const stale = state.users.filter(u => {
+    const last = lastPlayedDate(u.id);
+    return last && daysBetween(last, end) > ROSTER_DAYS;
+  }).map(u => `${u.name}(${daysBetween(lastPlayedDate(u.id), end)} 天)`);
+  if (stale.length) issues.push(['长期停赛', `${stale.length} 人超过 ${ROSTER_DAYS} 天没参赛，分数被冻结但仍计入总榜：` + stale.join('、')]);
+  // 8) 无效数据
+  for (const c of state.contests) {
+    if (!c.date) issues.push(['缺日期', `「${c.name}」没有日期，结算顺序不可预期`]);
+    if (c.results.some(r => !isFinite(r.total))) issues.push(['总分异常', `「${c.name}」有非法总分`]);
+  }
+  return issues;
+}
+
+function showHealth() {
+  renderHealth();
+}
+
+/* ============================================================
+ *  4.6 分析页（独立一页，只读统计）
+ * ============================================================ */
+let anSortKey = 'rating';
+let anRoster  = 'active';
+let anSearch  = '';
+let anUid     = null;
+
+function renderAnalysis() {
+  if (!$('analysisTable')) return;
+  const idx = analysisIndex();
+  const el = $('analysisTable');
+
+  const q = anSearch.trim().toLowerCase();
+  let users = state.users.filter(u => {
+    if (anRoster === 'active' && !isActiveUser(u)) return false;
+    if (q && !(u.name.toLowerCase().includes(q) ||
+               (u.aliases || []).some(a => a.toLowerCase().includes(q)))) return false;
+    return true;
+  });
+
+  // 排序
+  const val = (u, k) => {
+    const s = idx.stats[u.id] || { matches: 0 };
+    if (k === 'rating') return u.rating;
+    if (k === 'matches') return s.matches || 0;
+    if (k === 'avgRank') return s.matches ? -s.avgRank : -999;      // 名次越小越好
+    const v = s[k];
+    return v == null ? -Infinity : v;
+  };
+  users.sort((a, b) => val(b, anSortKey) - val(a, anSortKey));
+
+  // 表体
+  el.innerHTML = `<table class="tbl">
+    <thead><tr>
+      <th class="num">#</th>
+      <th>选手</th>
+      <th class="num">Rating</th>
+      <th class="num">±</th>
+      <th class="num">场次</th>
+      <th class="num" title="平均击败对手比例：每场击败的对手数 / 本场对手总数，再对全部场次取平均（已折算人数）">胜率</th>
+      <th class="num" title="把所有同场对手展开统计：胜 / (胜 + 负)，并列名次不计">对局胜率</th>
+      <th class="num">平均名次</th>
+      <th class="num">最好</th>
+      <th class="num">最差</th>
+      <th class="num">前三</th>
+      <th class="num">夺冠</th>
+      <th class="num" title="一场比赛中每道题都拿到 ≥90 分">AK</th>
+      <th class="num" title="按当场对手强弱折算出的水平分">平均 Perf</th>
+      <th class="num">最高 Perf</th>
+      <th class="num">场均总分</th>
+      <th class="num">平均人数</th>
+      <th class="num">近 5 场</th>
+      <th>状态</th>
+    </tr></thead>
+    <tbody>
+      ${users.map((u, i) => {
+        const s = idx.stats[u.id] || { matches: 0 };
+        const unc = uncertaintyOf(u);
+        const st = statusOf(u);
+        const form = s.matches ? s.form5 : null;
+        return `<tr>
+          <td class="num">${i + 1}</td>
+          <td><b style="cursor:pointer" data-uid="${u.id}" class="an-name">${nameHtml(u.name, u.rating)}</b></td>
+          <td class="num">${colorBar(u.rating, u.rating)}</td>
+          <td class="num muted">${unc == null ? '-' : '±' + unc}</td>
+          <td class="num">${u.matches}</td>
+          <td class="num"><b>${s.matches ? pct(s.beatRate) : '-'}</b></td>
+          <td class="num">${s.pairWinRate == null ? '-' : pct(s.pairWinRate)}</td>
+          <td class="num">${s.matches ? f1(s.avgRank) : '-'}</td>
+          <td class="num">${s.matches ? s.bestRank : '-'}</td>
+          <td class="num">${s.matches ? s.worstRank : '-'}</td>
+          <td class="num">${s.matches ? s.podium : '-'}</td>
+          <td class="num">${s.matches ? s.wins : '-'}</td>
+          <td class="num">${s.matches ? s.akCount : '-'}</td>
+          <td class="num">${s.matches ? f0(s.avgPerf) : '-'}</td>
+          <td class="num">${s.matches ? f0(s.bestPerf) : '-'}</td>
+          <td class="num">${s.matches ? f0(s.avgTotal) : '-'}</td>
+          <td class="num">${s.matches ? f0(s.avgField) : '-'}</td>
+          <td class="num ${form > 0 ? 'pos' : form < 0 ? 'neg' : ''}">${form == null ? '-' : (form > 0 ? '+' + form : form)}</td>
+          <td class="${st.cls}">${st.t}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+
+  $('analysisNote').innerHTML =
+    `共 ${users.length} 人（${anRoster === 'active' ? `现役口径：最后一场比赛起 ${ROSTER_DAYS} 天内有参赛；全部 ${state.users.length} 人` : `全部 ${state.users.length} 人`}）　·　` +
+    `基准日期 ${esc(idx.end || '-')}　·　点名字加入下方画像。` +
+    `<br>「胜率」已折算人数：3 人场拿第 2 = 50%，41 人场拿第 2 = 97.5%；「平均 Perf」按当场对手强弱折算，是跨场次最可比的水平指标；「±」按场次粗估，场次越少越不可信。`;
+
+  el.querySelectorAll('.an-name').forEach(a => {
+    a.addEventListener('click', () => {
+      anUid = parseInt(a.dataset.uid, 10);
+      $('anPlayer').value = String(anUid);
+      renderProfile();
+      $('analysisProfile').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // 下拉框
+  const sel = $('anPlayer');
+  const cur = anUid != null ? String(anUid) : sel.value;
+  sel.innerHTML = [...state.users]
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh'))
+    .map(u => `<option value="${u.id}">${esc(u.name)}（${u.rating} 分 · ${u.matches} 场）</option>`)
+    .join('');
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+  if (!anUid && sel.value) anUid = parseInt(sel.value, 10);
+
+  // 顶部统计
+  const active = state.users.filter(isActiveUser);
+  const rated = active.filter(u => u.matches > 0);
+  const rates = rated.map(u => idx.stats[u.id].beatRate).filter(v => v != null);
+  const best = rated.slice().sort((a, b) => (idx.stats[b.id].beatRate || 0) - (idx.stats[a.id].beatRate || 0))[0];
+  $('analysisStatRow').innerHTML = `
+    <div class="stat"><div class="v">${active.length}</div><div class="k">现役选手（${ROSTER_DAYS} 天内有参赛）</div></div>
+    <div class="stat"><div class="v">${state.contests.length}</div><div class="k">比赛场次</div></div>
+    <div class="stat"><div class="v">${rates.length ? (100 * rates.reduce((a, b) => a + b, 0) / rates.length).toFixed(1) + '%' : '-'}</div><div class="k">现役平均胜率</div></div>
+    <div class="stat"><div class="v" style="color:var(--green)">${best ? esc(best.name) : '-'}</div><div class="k">现役胜率最高${best ? '（' + pct(idx.stats[best.id].beatRate) + '）' : ''}</div></div>
+  `;
+
+  renderProfile();
+  renderHealth();
+}
+
+function renderProfile() {
+  const box = $('analysisProfile');
+  if (!box) return;
+  const uid = anUid != null ? anUid : parseInt($('anPlayer').value, 10);
+  if (!uid) { box.innerHTML = '<div class="empty">请选择选手</div>'; return; }
+  anUid = uid;
+  box.innerHTML = analysisProfileHtml(uid);
+}
+
+function renderHealth() {
+  const box = $('healthBox');
+  if (!box) return;
+  const issues = dataHealth();
+  box.innerHTML = issues.length
+    ? issues.map(([t, d]) =>
+        `<div style="margin-bottom:10px;padding:10px 12px;border:1px solid var(--border);border-left:3px solid var(--red);border-radius:8px">
+           <b class="neg">【${esc(t)}】</b> ${esc(d)}
+         </div>`).join('')
+    : '<div class="empty">没有发现问题 🎉</div>';
+}
+
+/* ============================================================
+ *  5. 渲染
+ * ============================================================ */
+function renderAll() {
+  ANALYSIS = null;              // 统计缓存失效
+  DIFF_CACHE = {};              // 题位难度缓存失效
+  renderContests();
+  renderRating();
+  renderPlayers();
+  renderStats();
+  renderSnapInfo();
+  renderAnalysis();
+}
+
+function renderContests() {
+  const el = $('contestList');
+  if (!state.contests.length) {
+    el.innerHTML = '<div class="empty">还没有比赛，去「导入成绩」页面添加吧</div>';
+    return;
+  }
+  const list = [...state.contests].sort((a, b) =>
+    a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id
+  );
+  el.innerHTML = list.map(c => `
+    <div class="contest-item">
+      <div class="ci-head">
+        <div>
+          <div class="ci-name">${esc(c.name)}</div>
+          <div class="ci-meta">📅 ${esc(c.date)} · ${c.results.length} 人 · 权重 ${c.weight} · ${c.source === 'lemon_html' ? 'Lemon' : 'CCR'}</div>
+        </div>
+        <div class="ci-actions">
+          <button class="btn small primary" data-act="view" data-id="${c.id}">查看榜单</button>
+          <button class="btn small" data-act="edit" data-id="${c.id}">勘误编辑</button>
+          <button class="btn small danger" data-act="del" data-id="${c.id}">删除</button>
+        </div>
+      </div>
+    </div>`).join('');
+
+  el.querySelectorAll('button[data-act]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.id, 10);
+      if (btn.dataset.act === 'view') showContest(id);
+      else if (btn.dataset.act === 'edit') editContest(id);
+      else deleteContest(id);
+    });
+  });
+}
+
+function deleteContest(id) {
+  if (!canEdit()) return;
+  const c = state.contests.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`确定删除比赛「${c.name}」吗？删除后会重算所有 Rating。`)) return;
+  pushSnapshot();
+  state.contests = state.contests.filter(x => x.id !== id);
+  recalculateAll();
+  renderAll();
+  toast('已删除并重算');
+}
+
+function showContest(id) {
+  const c = state.contests.find(x => x.id === id);
+  if (!c) return;
+
+  const results = [...c.results].sort((a, b) => a.rank - b.rank);
+
+  const html = `
+    <div class="toolbar">
+      <span class="muted">📅 ${esc(c.date)} · 权重 ${c.weight} · 共 ${results.length} 人</span>
+      <div class="spacer"></div>
+      <button class="btn small primary" id="editContestBtn">✏️ 勘误编辑</button>
+      <button class="btn small" id="redateBtn">📅 改日期</button>
+      <button class="btn small danger" id="delContestBtn">🗑 删除</button>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead><tr>
+          <th class="num">#</th>
+          <th>选手</th>
+          ${c.problems.map(p => `<th class="num">${esc(p)}</th>`).join('')}
+          <th class="num">总分</th>
+          <th class="num">Performance</th>
+          <th>Rating 变化</th>
+        </tr></thead>
+        <tbody>
+          ${results.map(r => {
+            const u = findUser(r.userId);
+            const d = r.delta ?? 0;
+            const cls = d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero';
+            const dStr = d > 0 ? '+' + d : String(d);
+            const rAfter = r.ratingAfter ?? u?.rating ?? 0;
+            const rBefore = r.ratingBefore ?? u?.rating ?? 0;
+            return `<tr>
+              <td class="num">${r.rank}</td>
+              <td><b>${nameHtml(u ? u.name : r.rawName, rAfter)}</b></td>
+              ${(r.scores || []).map(s => `<td class="num">${s}</td>`).join('')}
+              <td class="num"><b>${r.total}</b></td>
+              <td class="num">${r.performance != null ? colorBar(r.performance, Math.round(r.performance)) : '-'}</td>
+              <td>
+                ${rBefore}
+                <span class="${cls}" style="margin:0 2px">${dStr}</span>
+                → ${colorBar(rAfter, rAfter)}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  openModal(c.name, html);
+
+  $('editContestBtn').onclick = () => editContest(id);
+  $('redateBtn').onclick = () => {
+    if (!canEdit()) return;
+    const nd = prompt('输入新的比赛日期 (YYYY-MM-DD)', c.date);
+    if (!nd || !/^\d{4}-\d{2}-\d{2}$/.test(nd)) return;
+    pushSnapshot();
+    c.date = nd;
+    recalculateAll();
+    renderAll();
+    showContest(id);
+    toast('日期已更新并重算');
+  };
+  $('delContestBtn').onclick = () => { closeModal(); deleteContest(id); };
+}
+
+function editContest(id) {
+  if (!canEdit()) return;
+  const c = state.contests.find(x => x.id === id);
+  if (!c) return;
+
+  const rows = [...c.results].sort((a, b) => a.rank - b.rank);
+
+  const html = `
+    <p class="muted">直接修改各题分数后点"保存并重算"，系统会重新排名次、算 Performance 和 Rating。</p>
+    <div class="toolbar">
+      <label style="flex-direction:row;align-items:center;gap:6px">
+        <span style="font-size:13px">日期</span>
+        <input type="date" id="editDate" value="${esc(c.date)}" style="width:auto">
+      </label>
+      <label style="flex-direction:row;align-items:center;gap:6px">
+        <span style="font-size:13px">权重</span>
+        <input type="number" id="editWeight" value="${c.weight}" step="0.1" min="0.1" max="3" style="width:90px">
+      </label>
+      <div class="spacer"></div>
+      <button class="btn small" id="editAddRow">➕ 添加选手</button>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead><tr>
+          <th class="num">#</th>
+          <th>选手</th>
+          ${c.problems.map(p => `<th class="num">${esc(p)}</th>`).join('')}
+          <th class="num">总分</th>
+          <th>操作</th>
+        </tr></thead>
+        <tbody id="editTbody">
+          ${rows.map((r, i) => {
+            const u = findUser(r.userId);
+            return `<tr data-uid="${r.userId}" data-name="${esc(u ? u.name : r.rawName)}">
+              <td class="num idx">${i+1}</td>
+              <td><b>${nameHtml(u ? u.name : r.rawName, u ? u.rating : 0)}</b></td>
+              ${(r.scores || []).map((s, j) =>
+                `<td class="num"><input type="number" class="edit-score" data-j="${j}" value="${s}" style="width:70px;text-align:right;padding:3px 6px"></td>`
+              ).join('')}
+              <td class="num total-cell"><b>${r.total}</b></td>
+              <td><button class="btn small danger" data-act="rm">移出</button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="editSave">💾 保存并重算</button>
+      <button class="btn" id="editCancel">取消</button>
+    </div>
+  `;
+
+  openModal(`勘误：${c.name}`, html);
+
+  const tbody = $('editTbody');
+
+  const recalcTotals = () => {
+    [...tbody.querySelectorAll('tr[data-uid]')].forEach((tr, idx) => {
+      tr.querySelector('.idx').textContent = idx + 1;
+      const sum = [...tr.querySelectorAll('input.edit-score')]
+        .reduce((a, el) => a + (parseFloat(el.value) || 0), 0);
+      tr.querySelector('.total-cell').innerHTML = `<b>${sum}</b>`;
+    });
+  };
+
+  const bindRow = tr => {
+    tr.querySelectorAll('input.edit-score').forEach(inp =>
+      inp.addEventListener('input', recalcTotals)
+    );
+    tr.querySelector('button[data-act="rm"]').onclick = () => {
+      tr.remove(); recalcTotals();
+    };
+  };
+
+  [...tbody.querySelectorAll('tr[data-uid]')].forEach(bindRow);
+
+  $('editAddRow').onclick = () => {
+    const name = prompt('输入要添加的选手名字（必须是系统中已有的选手）');
+    if (!name || !name.trim()) return;
+    const u = findUserByName(name.trim());
+    if (!u) { toast('系统中找不到该选手'); return; }
+    if ([...tbody.querySelectorAll('tr[data-uid]')].some(tr => +tr.dataset.uid === u.id)) {
+      toast('该选手已在列表中'); return;
+    }
+    const tr = document.createElement('tr');
+    tr.dataset.uid = u.id;
+    tr.dataset.name = u.name;
+    tr.innerHTML = `
+      <td class="num idx"></td>
+      <td><b>${nameHtml(u.name, u.rating)}</b></td>
+      ${c.problems.map((_, j) =>
+        `<td class="num"><input type="number" class="edit-score" data-j="${j}" value="0" style="width:70px;text-align:right;padding:3px 6px"></td>`
+      ).join('')}
+      <td class="num total-cell"><b>0</b></td>
+      <td><button class="btn small danger" data-act="rm">移出</button></td>`;
+    tbody.appendChild(tr);
+    bindRow(tr);
+    recalcTotals();
+  };
+
+  $('editCancel').onclick = () => showContest(id);
+
+  $('editSave').onclick = () => {
+    const nd = $('editDate').value;
+    if (!nd) { toast('日期不能为空'); return; }
+    const nw = parseFloat($('editWeight').value) || 1;
+
+    pushSnapshot();
+
+    const newResults = [];
+    const seen = new Set();
+    [...tbody.querySelectorAll('tr[data-uid]')].forEach(tr => {
+      const uid = parseInt(tr.dataset.uid, 10);
+      if (seen.has(uid)) return;
+      seen.add(uid);
+      const scores = [...tr.querySelectorAll('input.edit-score')]
+        .map(el => parseFloat(el.value) || 0);
+      const total = scores.reduce((a, b) => a + b, 0);
+      const old = c.results.find(x => x.userId === uid);
+      newResults.push({
+        userId: uid,
+        rawName: old ? old.rawName : (tr.dataset.name || ''),
+        rank: 0, total, scores,
+        performance: null, ratingBefore: null, ratingAfter: null, delta: null
+      });
+    });
+
+    if (!newResults.length) {
+      snapStack.pop(); renderSnapInfo();
+      toast('至少保留一位选手');
+      return;
+    }
+
+    c.date = nd;
+    c.weight = nw;
+    c.results = newResults;
+
+    recalculateAll();
+    renderAll();
+    showContest(id);
+    toast('已保存并重算全部 Rating');
+  };
+}
+
+function renderRating() {
+  const el = $('ratingTable');
+  if (!state.users.length) {
+    el.innerHTML = '<div class="empty">暂无选手数据</div>';
+    return;
+  }
+
+  document.querySelectorAll('[data-rating-mode]').forEach(b => {
+    b.classList.toggle('primary', b.dataset.ratingMode === ratingMode);
+  });
+
+  const lastDelta = {};
+  const sortedContests = [...state.contests].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id
+  );
+  for (const c of sortedContests) {
+    for (const r of c.results) lastDelta[r.userId] = r.delta;
+  }
+
+  const users = [...state.users].sort((a, b) =>
+    ratingMode === 'cur' ? b.rating - a.rating : b.maxRating - a.maxRating
+  );
+
+  const mainLabel = ratingMode === 'cur' ? '当前 Rating' : '最高 Rating';
+  const subLabel  = ratingMode === 'cur' ? '最高 Rating' : '当前 Rating';
+
+  el.innerHTML = `<table class="tbl">
+    <thead><tr>
+      <th class="num">#</th>
+      <th>选手</th>
+      <th class="num">${mainLabel}</th>
+      <th class="num">${subLabel}</th>
+      <th class="num">场次</th>
+      <th>最近变化</th>
+      <th>别名</th>
+    </tr></thead>
+    <tbody>
+      ${users.map((u, i) => {
+        const d = lastDelta[u.id];
+        const dHtml = d == null
+          ? '<span class="muted">-</span>'
+          : `<span class="${d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero'}">${d > 0 ? '+' + d : d}</span>`;
+        const main = ratingMode === 'cur' ? u.rating : u.maxRating;
+        const sub  = ratingMode === 'cur' ? u.maxRating : u.rating;
+        return `<tr>
+          <td class="num">${i + 1}</td>
+          <td><b style="cursor:pointer" data-uid="${u.id}" class="uname">${nameHtml(u.name, main)}</b></td>
+          <td class="num">${colorBar(main, main)}</td>
+          <td class="num">${colorBar(sub, sub)}</td>
+          <td class="num">${u.matches}</td>
+          <td>${dHtml}</td>
+          <td class="muted">${esc((u.aliases || []).join(', ') || '-')}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+
+  el.querySelectorAll('.uname').forEach(a => {
+    a.addEventListener('click', () => showUser(parseInt(a.dataset.uid, 10)));
+  });
+}
+
+function renderRatingChart(history, user) {
+  const W = 720, H = 260;
+  const padL = 46, padR = 16, padT = 22, padB = 40;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+
+  const initR = user.initialRating ?? 1500;
+  const points = [{
+    label: '初始', rating: initR,
+    tip: `初始 Rating ${initR}`,
+    contest: null
+  }];
+  history.forEach(h => {
+    const r = h.result.ratingAfter;
+    if (r == null) return;
+    const d = h.result.delta ?? 0;
+    points.push({
+      label: h.contest.date.slice(5),
+      rating: r,
+      contest: h.contest,
+      tip: `${h.contest.date}  ${h.contest.name}\n` +
+           `名次 ${h.result.rank} · 总分 ${h.result.total}\n` +
+           `${d > 0 ? '+' + d : d} → ${r}`
+    });
+  });
+
+  if (points.length < 2) {
+    return `<div class="empty" style="padding:24px;border:1px solid var(--border);border-radius:8px">
+      暂不足以绘制曲线（至少需要 1 场比赛）
+    </div>`;
+  }
+
+  const rs = points.map(p => p.rating);
+  let lo = Math.min(...rs), hi = Math.max(...rs);
+  if (hi - lo < 100) { const mid = (hi + lo) / 2; lo = mid - 50; hi = mid + 50; }
+  const padding = (hi - lo) * 0.12;
+  lo = Math.max(0, Math.floor((lo - padding) / 50) * 50);
+  hi = Math.ceil((hi + padding) / 50) * 50;
+
+  const xOf = i => padL + (i / (points.length - 1)) * innerW;
+  const yOf = r => padT + innerH - ((r - lo) / (hi - lo)) * innerH;
+
+  let grid = '';
+  const yTicks = 4;
+  for (let i = 0; i <= yTicks; i++) {
+    const r = lo + (hi - lo) * (i / yTicks);
+    const y = yOf(r);
+    grid += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}"
+              stroke="#e5e7eb" stroke-dasharray="3,3" />
+             <text x="${padL - 6}" y="${y + 4}" text-anchor="end"
+              font-size="10" fill="#6b7280">${Math.round(r)}</text>`;
+  }
+
+  const pathD = points.map((p, i) =>
+    `${i === 0 ? 'M' : 'L'} ${xOf(i)} ${yOf(p.rating)}`
+  ).join(' ');
+  const areaD =
+    `M ${xOf(0)} ${padT + innerH} ` +
+    points.map((p, i) => `L ${xOf(i)} ${yOf(p.rating)}`).join(' ') +
+    ` L ${xOf(points.length - 1)} ${padT + innerH} Z`;
+
+  let dots = '';
+  points.forEach((p, i) => {
+    const x = xOf(i), y = yOf(p.rating);
+    const col = ratingColor(p.rating);
+    dots += `<circle cx="${x}" cy="${y}" r="4" fill="#fff"
+               stroke="${col}" stroke-width="2">
+               <title>${esc(p.tip)}</title>
+             </circle>`;
+    if (i === 0 || i === points.length - 1) {
+      dots += `<text x="${x}" y="${y - 9}" text-anchor="middle"
+                font-size="10" font-weight="700" fill="${col}">${p.rating}</text>`;
+    }
+  });
+
+  let xLabels = '';
+  const step = Math.max(1, Math.ceil(points.length / 12));
+  points.forEach((p, i) => {
+    if (i % step !== 0 && i !== points.length - 1) return;
+    xLabels += `<text x="${xOf(i)}" y="${H - padB + 16}" text-anchor="middle"
+                 font-size="10" fill="#6b7280">${esc(p.label)}</text>`;
+  });
+
+  return `
+    <div style="border:1px solid var(--border);border-radius:8px;
+                background:#fafbfc;padding:8px 4px 4px;margin-bottom:12px">
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+        ${grid}
+        <path d="${areaD}" fill="rgba(37,99,235,0.06)" />
+        <path d="${pathD}" fill="none" stroke="#2563eb" stroke-width="2"
+              stroke-linejoin="round" stroke-linecap="round" />
+        ${dots}
+        ${xLabels}
+      </svg>
+    </div>
+  `;
+}
+
+function showUser(uid) {
+  const u = findUser(uid);
+  if (!u) return;
+
+  const history = [];
+  const sortedContests = [...state.contests].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id
+  );
+  for (const c of sortedContests) {
+    const r = c.results.find(r => r.userId === uid);
+    if (r) history.push({ contest: c, result: r });
+  }
+
+  const html = `
+    <div class="stat-row">
+      <div class="stat"><div class="v" style="color:${ratingColor(u.rating)}">${u.rating}</div><div class="k">当前 Rating</div></div>
+      <div class="stat"><div class="v" style="color:${ratingColor(u.maxRating)}">${u.maxRating}</div><div class="k">最高 Rating</div></div>
+      <div class="stat"><div class="v">${u.matches}</div><div class="k">参赛场次</div></div>
+      <div class="stat"><div class="v">${u.initialRating}</div><div class="k">初始 Rating</div></div>
+    </div>
+    <div class="muted" style="margin-bottom:10px">别名：${esc((u.aliases || []).join(', ') || '无')}</div>
+    ${renderRatingChart(history, u)}
+    ${history.length ? `
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead><tr>
+          <th>比赛</th><th>日期</th><th class="num">名次</th><th class="num">总分</th>
+          <th class="num">Performance</th><th class="num">变化</th><th class="num">赛后 Rating</th>
+        </tr></thead>
+        <tbody>
+          ${history.map(h => {
+            const d = h.result.delta ?? 0;
+            const rAfter = h.result.ratingAfter ?? 0;
+            return `<tr>
+              <td>${esc(h.contest.name)}</td>
+              <td>${esc(h.contest.date)}</td>
+              <td class="num">${h.result.rank}</td>
+              <td class="num">${h.result.total}</td>
+              <td class="num">${h.result.performance != null ? colorBar(h.result.performance, Math.round(h.result.performance)) : '-'}</td>
+              <td class="num ${d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero'}">${d > 0 ? '+' + d : d}</td>
+              <td class="num">${colorBar(rAfter, rAfter)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>` : '<div class="empty">该选手还没有参赛记录</div>'}
+  `;
+
+  openModal(u.name + ' 的 Rating 历史', html);
+}
+
+/* ---------- 分析页：选手画像（独立于排名页，内嵌在分析页里） ---------- */
+function analysisProfileHtml(uid) {
+  const u = findUser(uid);
+  if (!u) return '<div class="empty">请选择选手</div>';
+  const idx = analysisIndex();
+  const history = idx.hist[uid] || [];
+  const st = idx.stats[uid] || computeStats(uid, history);
+  if (!st.matches) return `<div class="empty">${esc(u.name)} 还没有参赛记录</div>`;
+
+  const posLabel = ['P1', 'P2', 'P3', 'P4'];   // 仅用于旧引用，题位现已按通过率排序
+  const posTag = ['最易', '次易', '次难', '最难'];
+  const opp = Object.entries(st.h2h || {})
+    .map(([id, v]) => ({ id: parseInt(id, 10), ...v, total: v.w + v.l + v.t, me: findUser(parseInt(id, 10)) }))
+    .filter(x => x.me)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 12);
+
+  return `
+    <div class="stat-row">
+      <div class="stat"><div class="v" style="color:${ratingColor(u.rating)}">${u.rating}</div><div class="k">当前 Rating</div></div>
+      <div class="stat"><div class="v" style="color:${ratingColor(u.maxRating)}">${u.maxRating}</div><div class="k">最高 Rating</div></div>
+      <div class="stat"><div class="v">${u.matches}</div><div class="k">参赛场次</div></div>
+      <div class="stat"><div class="v">${statusOf(u).t}</div><div class="k">状态</div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v pos">${pct(st.beatRate)}</div><div class="k">胜率（平均击败对手比例）</div></div>
+      <div class="stat"><div class="v">${st.pairWinRate == null ? '-' : pct(st.pairWinRate)}</div><div class="k">对局胜率（${st.pairsW} 胜 / ${st.pairsL} 负 / ${st.pairsT} 平）</div></div>
+      <div class="stat"><div class="v">${f1(st.avgRank)}</div><div class="k">平均名次（最好 ${st.bestRank} / 最差 ${st.worstRank}）</div></div>
+      <div class="stat"><div class="v">${f0(st.avgPerf)}</div><div class="k">平均 Performance（最高 ${f0(st.bestPerf)}）</div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v">${st.wins}</div><div class="k">夺冠次数</div></div>
+      <div class="stat"><div class="v">${st.podium}</div><div class="k">进入前三</div></div>
+      <div class="stat"><div class="v">${st.akCount}</div><div class="k">AK 场次（每题 ≥90）</div></div>
+      <div class="stat"><div class="v">${f0(st.avgTotal)}</div><div class="k">场均总分（最高 ${st.bestTotal}）</div></div>
+      <div class="stat"><div class="v">${f0(st.avgField)}</div><div class="k">平均同场人数</div></div>
+      <div class="stat"><div class="v ${st.form5 > 0 ? 'pos' : st.form5 < 0 ? 'neg' : ''}">${st.form5 > 0 ? '+' + st.form5 : st.form5}</div><div class="k">近 5 场 Rating 净变化</div></div>
+    </div>
+    <div class="muted" style="margin-bottom:10px">
+      参赛区间：${esc(st.first)} ~ ${esc(st.last)}　·　
+      近 5 场名次：${st.fresh.map(x => x.result.rank).join(' → ')}　·　
+      别名：${esc((u.aliases || []).join(', ') || '无')}
+    </div>
+
+    <h2 style="font-size:14px;margin:14px 0 8px">各题位满分率（按当场全场「满分率」排序：P1=最容易，P4=最难）</h2>
+    <table class="tbl" style="white-space:nowrap">
+      <thead><tr>
+        <th>题位</th><th class="num">作答场次</th>
+        <th class="num" title="该题全场拿到 ≥90 分的人数比例（＝做出来了的比例）">全场满分率</th>
+        <th class="num" title="我拿到 ≥90 分的比例">我的满分率</th>
+        <th class="num" title="我的满分率 − 全场满分率，正数说明这档题我做出来得比同场人多">与全场差</th>
+        <th class="num" title="我的得分 > 0 的比例（碰到分了，但未必做出来）">我的有分率</th>
+      </tr></thead>
+      <tbody>
+        ${[0, 1, 2, 3].map(k => st.posAtt[k] ? (() => {
+          const gap = (st.posMyRate[k] != null && st.posFieldRate[k] != null)
+            ? st.posMyRate[k] - st.posFieldRate[k] : null;
+          return `<tr>
+            <td><b>P${k + 1}</b><span class="muted" style="font-size:11px"> ${posTag[k]}</span></td>
+            <td class="num">${st.posAtt[k]}</td>
+            <td class="num muted">${pct(st.posFieldRate[k])}</td>
+            <td class="num"><b>${pct(st.posMyRate[k])}</b></td>
+            <td class="num ${gap > 0 ? 'pos' : gap < 0 ? 'neg' : ''}">${gap == null ? '-' : (gap > 0 ? '+' : '') + (100 * gap).toFixed(0) + '%'}</td>
+            <td class="num">${pct(st.posRate[k])}</td>
+          </tr>`;
+        })() : '').join('')}
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:6px">
+      · <b>满分率</b>＝该题得分≥90 的比例（<b>真正做出来了</b>）；<b>有分率</b>＝得分&gt;0 的比例（碰到分了，写个暴力也算）。
+      两者差别很大，别混。<br>
+      · 题目按「当场全场满分率」从高到低排序后再统计，所以 <b>P1 未必是试卷第 1 列</b>
+      （实测只有约 1/3 的比赛列序等于难度序）；满分率相同时用平均得分率兜底。<br>
+      · 「与全场差」用的是各自打过的那些场次，横向可比；正数说明这档题你做出来得比同场人多。
+    </p>
+
+    <h2 style="font-size:14px;margin:16px 0 8px">交手战绩（同场最多的 ${opp.length} 位对手）</h2>
+    ${opp.length ? `
+    <div class="table-wrap">
+      <table class="tbl" style="white-space:nowrap">
+        <thead><tr><th>对手</th><th class="num">同场</th><th class="num">领先</th><th class="num">落后</th><th class="num">持平</th><th class="num">胜率</th></tr></thead>
+        <tbody>
+          ${opp.map(o => `<tr>
+            <td><b>${nameHtml(o.me.name, o.me.rating)}</b></td>
+            <td class="num">${o.total}</td>
+            <td class="num pos">${o.w}</td>
+            <td class="num neg">${o.l}</td>
+            <td class="num muted">${o.t}</td>
+            <td class="num"><b>${o.w + o.l ? pct(o.w / (o.w + o.l)) : '-'}</b></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : '<div class="empty">还没有同场记录</div>'}
+
+    <h2 style="font-size:14px;margin:16px 0 8px">Rating 曲线</h2>
+    ${renderRatingChart(history, u)}
+
+    <h2 style="font-size:14px;margin:16px 0 8px">逐场记录</h2>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead><tr>
+          <th>比赛</th><th>日期</th><th class="num">人数</th><th class="num">名次</th>
+          <th class="num">击败率</th><th class="num">总分</th>
+          <th class="num">Performance</th><th class="num">变化</th><th class="num">赛后 Rating</th>
+        </tr></thead>
+        <tbody>
+          ${history.map(h => {
+            const d = h.result.delta ?? 0;
+            const rAfter = h.result.ratingAfter ?? 0;
+            const n = h.n || h.contest.results.length;
+            const br = n > 1 ? (n - h.result.rank) / (n - 1) : 1;
+            return `<tr>
+              <td>${esc(h.contest.name)}</td>
+              <td>${esc(h.contest.date)}</td>
+              <td class="num">${n}</td>
+              <td class="num">${h.result.rank}</td>
+              <td class="num">${pct(br)}</td>
+              <td class="num">${h.result.total}</td>
+              <td class="num">${h.result.performance != null ? colorBar(h.result.performance, Math.round(h.result.performance)) : '-'}</td>
+              <td class="num ${d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero'}">${d > 0 ? '+' + d : d}</td>
+              <td class="num">${colorBar(rAfter, rAfter)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderPlayers() {
+  const el = $('playerTable');
+  if (!state.users.length) {
+    el.innerHTML = '<div class="empty">暂无选手</div>';
+    return;
+  }
+  const users = [...state.users].sort((a, b) => a.name.localeCompare(b.name, 'zh'));
+
+  el.innerHTML = `<table class="tbl">
+    <thead><tr>
+      <th>ID</th><th>姓名</th><th class="num">Rating</th><th class="num">场次</th><th>别名</th><th>操作</th>
+    </tr></thead>
+    <tbody>
+      ${users.map(u => `<tr>
+        <td class="muted">${u.id}</td>
+        <td><b>${nameHtml(u.name, u.rating)}</b></td>
+        <td class="num">${colorBar(u.rating, u.rating)}</td>
+        <td class="num">${u.matches}</td>
+        <td class="muted">${esc((u.aliases || []).join(', ') || '-')}</td>
+        <td>
+          <button class="btn small" data-act="rename" data-id="${u.id}">改名</button>
+          <button class="btn small danger" data-act="del" data-id="${u.id}">删除</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+
+  el.querySelectorAll('button[data-act]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.id, 10);
+      if (btn.dataset.act === 'rename') renameUser(id);
+      else deleteUser(id);
+    });
+  });
+}
+
+function renameUser(id) {
+  if (!canEdit()) return;
+  const u = findUser(id);
+  if (!u) return;
+  const nn = prompt('输入新的显示名（旧名会保留为别名）', u.name);
+  if (!nn || !nn.trim() || nn.trim() === u.name) return;
+  const trimmed = nn.trim();
+  const existed = findUserByName(trimmed);
+  if (existed && existed.id !== id) { toast('该名字已被其他选手使用'); return; }
+  pushSnapshot();
+  if (u.name && !u.aliases.includes(u.name)) u.aliases.push(u.name);
+  u.name = trimmed;
+  saveState();
+  renderAll();
+  toast('已修改');
+}
+
+function deleteUser(id) {
+  if (!canEdit()) return;
+  const u = findUser(id);
+  if (!u) return;
+  if (!confirm(`确定删除选手「${u.name}」吗？他在所有比赛中的成绩也会被删除，并重算 Rating。`)) return;
+  pushSnapshot();
+  state.users = state.users.filter(x => x.id !== id);
+  for (const c of state.contests) {
+    c.results = c.results.filter(r => r.userId !== id);
+  }
+  recalculateAll();
+  renderAll();
+  toast('已删除并重算');
+}
+
+function showMergeDialog() {
+  if (!canEdit()) return;
+  if (state.users.length < 2) {
+    toast('至少需要两位选手才能合并');
+    return;
+  }
+
+  const users = [...state.users].sort((a, b) => a.name.localeCompare(b.name, 'zh'));
+  const opts = users.map(u =>
+    `<option value="${u.id}">${esc(u.name)}（${u.rating}分, ${u.matches}场）</option>`
+  ).join('');
+
+  const html = `
+    <p class="muted">
+      把「被合并选手」的所有成绩、别名迁移到「保留选手」，然后删除被合并选手。<br>
+      同一场比赛若两者都有成绩，保留「保留选手」的（另一份丢弃）。<br>
+      合并后会自动重算所有 Rating。
+    </p>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <label>保留选手<select id="mergeKeep">${opts}</select></label>
+      <label>被合并选手<select id="mergeDrop">${opts}</select></label>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="mergeConfirm">✅ 合并</button>
+      <button class="btn" id="mergeCancel">取消</button>
+    </div>
+  `;
+  openModal('合并两位选手', html);
+
+  const keepSel = $('mergeKeep'), dropSel = $('mergeDrop');
+  keepSel.selectedIndex = 0;
+  dropSel.selectedIndex = Math.min(1, users.length - 1);
+
+  $('mergeCancel').onclick = closeModal;
+  $('mergeConfirm').onclick = () => {
+    const keepId = parseInt(keepSel.value, 10);
+    const dropId = parseInt(dropSel.value, 10);
+    if (keepId === dropId) { toast('不能选择同一位选手'); return; }
+    const keep = findUser(keepId), drop = findUser(dropId);
+    if (!keep || !drop) return;
+    if (!confirm(`确定把「${drop.name}」合并到「${keep.name}」吗？\n（可回滚，但建议先导出备份）`)) return;
+    mergeUsers(keepId, dropId);
+    closeModal();
+  };
+}
+
+function mergeUsers(keepId, dropId) {
+  if (keepId === dropId) return;
+  const keep = findUser(keepId);
+  const drop = findUser(dropId);
+  if (!keep || !drop) return;
+
+  pushSnapshot();
+
+  const aliasSet = new Set([...(keep.aliases || []), ...(drop.aliases || [])]);
+  if (drop.name && drop.name !== keep.name) aliasSet.add(drop.name);
+  aliasSet.delete(keep.name);
+  keep.aliases = [...aliasSet];
+
+  let moved = 0, dropped = 0;
+  for (const c of state.contests) {
+    const dropIdx = c.results.findIndex(r => r.userId === dropId);
+    if (dropIdx < 0) continue;
+    const hasKeep = c.results.some(r => r.userId === keepId);
+    if (hasKeep) {
+      c.results.splice(dropIdx, 1);
+      dropped++;
+    } else {
+      c.results[dropIdx].userId = keepId;
+      moved++;
+    }
+  }
+
+  state.users = state.users.filter(u => u.id !== dropId);
+
+  recalculateAll();
+  renderAll();
+
+  let msg = `已合并「${drop.name}」→「${keep.name}」：迁移 ${moved} 场`;
+  if (dropped) msg += `，同场重复合并 ${dropped} 场`;
+  toast(msg, 3200);
+}
+
+function renderStats() {
+  const el = $('statRow');
+  if (!el) return;
+  const totalUsers = state.users.length;
+  const totalContests = state.contests.length;
+  const avg = totalUsers
+    ? Math.round(state.users.reduce((s, u) => s + u.rating, 0) / totalUsers)
+    : 0;
+  const top = [...state.users].sort((a, b) => b.rating - a.rating)[0];
+
+  el.innerHTML = `
+    <div class="stat"><div class="v">${totalUsers}</div><div class="k">注册选手</div></div>
+    <div class="stat"><div class="v">${totalContests}</div><div class="k">已录入比赛</div></div>
+    <div class="stat"><div class="v">${avg}</div><div class="k">平均 Rating</div></div>
+    <div class="stat"><div class="v" style="color:${top ? ratingColor(top.rating) : '#000'}">${top ? esc(top.name) : '-'}</div><div class="k">当前第一</div></div>
+  `;
+}
+
+/* ============================================================
+ *  6. 弹窗
+ * ============================================================ */
+function openModal(title, html) {
+  $('modalTitle').textContent = title;
+  $('modalBody').innerHTML = html;
+  $('modal').style.display = 'flex';
+}
+function closeModal() { $('modal').style.display = 'none'; }
+
+/* ============================================================
+ *  7. Tab 切换
+ * ============================================================ */
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  renderAll();
+}
+
+/* ============================================================
+ *  8. 设置页 UI
+ * ============================================================ */
+function loadSettingsUI() {
+  $('sInit').value         = state.settings.initialRating;
+  $('sBaseK').value        = state.settings.baseK ?? 200;
+  $('sMaxDelta').value     = state.settings.maxDelta;
+  $('sMin').value          = state.settings.minRating;
+  $('sMax').value          = state.settings.maxRating;
+  $('sNameBonus').value    = state.settings.nameBonusRatio ?? 0.5;
+  $('sRatingSlope').value  = state.settings.ratingSlope ?? 0.5;
+  $('sPodiumBonus').value  = state.settings.podiumBonusRatio ?? 0.6;
+  $('sLegend').value       = state.settings.legendThreshold ?? 3000;
+  renderSnapInfo();
+}
+
+/* ============================================================
+ *  9. 事件绑定 & 启动
+ * ============================================================ */
+function bindEvents() {
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => switchTab(t.dataset.tab));
+  });
+
+  document.querySelectorAll('[data-rating-mode]').forEach(b => {
+    b.addEventListener('click', () => {
+      ratingMode = b.dataset.ratingMode;
+      renderRating();
+    });
+  });
+
+  // 分析页控件（独立一页，不影响排名页）
+  const anSearchEl = $('anSearch');
+  if (anSearchEl) anSearchEl.addEventListener('input', e => { anSearch = e.target.value; renderAnalysis(); });
+  const anRosterEl = $('anRoster');
+  if (anRosterEl) anRosterEl.value = anRoster;
+  if (anRosterEl) anRosterEl.addEventListener('change', e => { anRoster = e.target.value; renderAnalysis(); });
+  const anSortEl = $('anSort');
+  if (anSortEl) anSortEl.addEventListener('change', e => { anSortKey = e.target.value; renderAnalysis(); });
+  const anPlayerEl = $('anPlayer');
+  if (anPlayerEl) anPlayerEl.addEventListener('change', e => {
+    anUid = parseInt(e.target.value, 10);
+    renderProfile();
+  });
+  const btnHealth2 = $('btnHealth2');
+  if (btnHealth2) btnHealth2.addEventListener('click', renderHealth);
+
+  const btnMerge = $('btnMergeUsers');
+  if (btnMerge) btnMerge.addEventListener('click', showMergeDialog);
+
+  // 恢复公开快照前保留当前本机修改，取消操作不会覆盖数据。
+  $('btnCloudPull').addEventListener('click', async () => {
+    if (CLOUD.dirty && !confirm('重新载入公开数据将覆盖当前浏览器中的修改。继续？')) return;
+    const remote = await cloudFetchData();
+    if (!remote) return;
+    pushSnapshot();
+    usePublishedData(remote);
+    toast('已重新载入公开数据');
+  });
+
+  const dz = $('dropzone');
+  const fi = $('fileInput');
+  dz.addEventListener('click', () => fi.click());
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('over');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fi.addEventListener('change', e => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+  });
+
+  $('btnConfirm').addEventListener('click', confirmImport);
+  $('btnCancel').addEventListener('click', () => {
+    pending = null; resetImportUI(); toast('已取消');
+  });
+
+  $('modalClose').addEventListener('click', closeModal);
+  $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  $('btnSaveSettings').addEventListener('click', () => {
+    if (!canEdit()) return;
+    pushSnapshot();
+    state.settings.initialRating    = num($('sInit').value) || 1500;
+    state.settings.baseK            = num($('sBaseK').value) || 200;
+    state.settings.maxDelta         = num($('sMaxDelta').value) || 300;
+    state.settings.minRating        = num($('sMin').value) || 0;
+    state.settings.maxRating        = num($('sMax').value) || 4000;
+    state.settings.nameBonusRatio   = Math.max(0, Math.min(1, num($('sNameBonus').value) ?? 0.5));
+    state.settings.ratingSlope      = Math.max(-1, Math.min(1, num($('sRatingSlope').value) ?? 0.5));
+    state.settings.podiumBonusRatio = Math.max(0, Math.min(2, num($('sPodiumBonus').value) ?? 0.6));
+    state.settings.legendThreshold  = num($('sLegend').value) || 3000;
+    recalculateAll();
+    renderAll();
+    toast('已保存并重算全部 Rating');
+  });
+
+  $('btnRollback').addEventListener('click', () => { if (canEdit()) rollback(); });
+
+  $('btnExport').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `oi-rating-backup-${today()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  $('btnImportJson').addEventListener('click', () => $('jsonInput').click());
+  $('jsonInput').addEventListener('change', e => {
+    if (!canEdit()) { e.target.value = ''; return; }
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.users || !data.contests) throw new Error('格式不正确');
+        if (!confirm('导入将覆盖当前所有数据，确定继续？')) return;
+        pushSnapshot();
+        state = Object.assign(defaultState(), data);
+        if (state.settings.legendThreshold == null)  state.settings.legendThreshold = 3000;
+        if (state.settings.ratingSlope == null)      state.settings.ratingSlope = 0.5;
+        if (state.settings.podiumBonusRatio == null) state.settings.podiumBonusRatio = 0.6;
+        recalculateAll();
+        renderAll();
+        loadSettingsUI();
+        toast('导入成功');
+      } catch (err) {
+        toast('导入失败：' + err.message);
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(f);
+  });
+
+  $('btnClear').addEventListener('click', () => {
+    if (!canEdit()) return;
+    if (!confirm('确定清空所有选手和比赛数据吗？此操作不可恢复！')) return;
+    if (!confirm('再次确认：真的要清空全部数据吗？')) return;
+    pushSnapshot();
+    state = defaultState();
+    saveState();
+    renderAll();
+    loadSettingsUI();
+    toast('已清空');
+  });
+}
+
+(function init() {
+  loadState();
+  bindEvents();
+  loadSettingsUI();
+  renderAll();
+  switchTab('rating');
+  cloudBoot();
+})();
+</script>
+</body>
+</html>
