@@ -406,7 +406,7 @@ function saveState() {
   state.updatedAt = Date.now();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    localStorage.setItem(STORAGE_KEY + '-dirty', '1');   // 本地有未上传的改动
+    localStorage.setItem(STORAGE_KEY + '-dirty', '1');   // 本机已修改公开快照
   }
   catch (e) { console.error(e); }
   scheduleCloudSave();
@@ -473,6 +473,12 @@ async function cloudBoot() {
   CLOUD.dirty = localStorage.getItem(STORAGE_KEY + '-dirty') === '1';
   renderCloudStatus();
   const remote = await cloudFetchData();
+  if (!CLOUD.dirty && localStorage.getItem(STORAGE_KEY + '-dirty') === '1') {
+    CLOUD.dirty = true;
+    loadState();
+    renderAll();
+    loadSettingsUI();
+  }
   if (remote && !CLOUD.dirty) usePublishedData(remote);
   renderCloudStatus();
 }
@@ -2349,9 +2355,10 @@ function bindEvents() {
 
   // 恢复公开快照前保留当前本机修改，取消操作不会覆盖数据。
   $('btnCloudPull').addEventListener('click', async () => {
-    if (CLOUD.dirty && !confirm('重新载入公开数据将覆盖当前浏览器中的修改。继续？')) return;
     const remote = await cloudFetchData();
     if (!remote) return;
+    const hasLocalEdits = CLOUD.dirty || localStorage.getItem(STORAGE_KEY + '-dirty') === '1';
+    if (hasLocalEdits && !confirm('重新载入公开数据将覆盖当前浏览器中的修改。继续？')) return;
     pushSnapshot();
     usePublishedData(remote);
     toast('已重新载入公开数据');

@@ -38,7 +38,7 @@ python3 -m http.server 8080 --bind 127.0.0.1
 .venv/bin/python tests/smoke.py --url http://127.0.0.1:8080/
 ```
 
-测试检查备份中的 Rating、53 位选手及 108 场比赛、六个标签页、分析筛选、本机修改后重载、取消/确认恢复、JSON 导出/导入、移动布局，以及没有脚本错误、网络写入和内网请求。可以用 `--browser-executable /path/to/chromium` 指定已有浏览器。
+测试检查备份中的 Rating、53 位选手及 108 场比赛、六个标签页、分析筛选、本机修改后重载、取消/确认恢复、慢网络下本机和其他标签页修改的保护、JSON 导出/导入、移动布局，以及没有脚本错误、网络写入和内网请求。可以用 `--browser-executable /path/to/chromium` 指定已有浏览器。
 
 ## 本机原始归档
 

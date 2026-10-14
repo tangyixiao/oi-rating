@@ -49,11 +49,12 @@ def main():
         page.locator('.tab[data-tab="settings"]').click()
         expect(page.locator('#sMin')).to_have_value('-123')
         page.once('dialog', lambda d: d.dismiss())
-        page.locator('#btnCloudPull').click()
-        page.wait_for_load_state('networkidle')
+        with page.expect_event('dialog'):
+            page.locator('#btnCloudPull').click()
         expect(page.locator('#sMin')).to_have_value('-123')
         page.once('dialog', lambda d: d.accept())
-        page.locator('#btnCloudPull').click()
+        with page.expect_event('dialog'):
+            page.locator('#btnCloudPull').click()
         expect(page.locator('#sMin')).to_have_value(str(backup['settings']['minRating']))
         with page.expect_download() as item:
             page.locator('#btnExport').click()
@@ -70,6 +71,52 @@ def main():
         expect(page.locator('#ratingTable tbody tr')).to_have_count(53)
         page.reload(wait_until='networkidle')
         expect(page.locator('#ratingTable tbody tr')).to_have_count(53)
+
+        page.locator('.tab[data-tab="settings"]').click()
+        held = []
+        edited_during_fetch = [False]
+        confirmations = []
+
+        def handle_restore_dialog(dialog):
+            confirmations.append(edited_during_fetch[0])
+            if edited_during_fetch[0]:
+                dialog.dismiss()
+            else:
+                dialog.accept()
+
+        page.route('**/data.json', lambda route: held.append(route))
+        page.on('dialog', handle_restore_dialog)
+        with page.expect_request('**/data.json'):
+            page.locator('#btnCloudPull').click()
+        page.locator('#sMin').fill('-333')
+        page.locator('#btnSaveSettings').click()
+        edited_during_fetch[0] = True
+        assert held, 'Restore request was not held'
+        with page.expect_event('dialog'):
+            held[0].fulfill(status=200, content_type='application/json', body=json.dumps(backup))
+        expect(page.locator('#sMin')).to_have_value('-333')
+        assert confirmations[-1] is True, 'Edits made while loading were not confirmed before overwriting'
+        page.remove_listener('dialog', handle_restore_dialog)
+        page.unroute('**/data.json')
+        page.once('dialog', lambda d: d.accept())
+        page.locator('#btnCloudPull').click()
+        expect(page.locator('#sMin')).to_have_value(str(backup['settings']['minRating']))
+
+        held_boot = []
+        other_tab = context.new_page()
+        other_tab.route('**/data.json', lambda route: held_boot.append(route))
+        other_tab.goto(args.url, wait_until='domcontentloaded')
+        page.locator('#sMin').fill('-444')
+        page.locator('#btnSaveSettings').click()
+        assert held_boot, 'Startup request was not held'
+        held_boot[0].fulfill(status=200, content_type='application/json', body=json.dumps(backup))
+        other_tab.wait_for_load_state('networkidle')
+        expect(other_tab.locator('#sMin')).to_have_value('-444')
+        assert other_tab.evaluate('JSON.parse(localStorage.getItem(STORAGE_KEY)).settings.minRating') == -444, 'Startup overwrote edits saved in another tab'
+        other_tab.close()
+        page.once('dialog', lambda d: d.accept())
+        page.locator('#btnCloudPull').click()
+        expect(page.locator('#sMin')).to_have_value(str(backup['settings']['minRating']))
 
         page.route('**/data.json', lambda route: route.abort())
         page.reload(wait_until='networkidle')
@@ -88,7 +135,7 @@ def main():
         assert not errors, errors
         assert not writes, writes
         assert not intranet, intranet
-        print(json.dumps({'status': 'passed', 'users': 53, 'contests': 108, 'checks': ['ratings_match_backup', 'six_tabs', 'analysis_filter', 'local_edit_reload', 'restore_cancel', 'restore_confirm', 'json_export', 'json_import', 'failed_fetch_preserves_local_data', 'mobile_layout', 'no_js_errors', 'no_network_writes', 'no_intranet_requests'], 'url': args.url}, ensure_ascii=False))
+        print(json.dumps({'status': 'passed', 'users': 53, 'contests': 108, 'checks': ['ratings_match_backup', 'six_tabs', 'analysis_filter', 'local_edit_reload', 'restore_cancel', 'restore_confirm', 'json_export', 'json_import', 'restore_protects_edits_during_fetch', 'startup_protects_edits_from_another_tab', 'failed_fetch_preserves_local_data', 'mobile_layout', 'no_js_errors', 'no_network_writes', 'no_intranet_requests'], 'url': args.url}, ensure_ascii=False))
         browser.close()
 
 
