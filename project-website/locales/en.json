@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "description": "Browse the standings, individual competitors and school OI contests. The initial backup contains 53 competitors and 108 contests."
+  },
+  "pages": {
+    "home": {
+      "title": "Follow school contest ratings across rounds · {project}"
+    },
+    "features": {
+      "title": "Features · {project}",
+      "description": "Browse the standings, individual competitors and school OI contests. The initial backup contains 53 competitors and 108 contests."
+    },
+    "download": {
+      "title": "Get started · {project}",
+      "description": "Open the site and select a competitor or contest to review."
+    },
+    "community": {
+      "title": "Community · {project}",
+      "description": "Find usage guidance, follow discussions and review changes to this project."
+    }
+  },
+  "nav": {
+    "home": "Home",
+    "features": "Features",
+    "download": "Get started",
+    "community": "Community"
+  },
+  "ui": {
+    "skip_link": "Skip to main content",
+    "navigation": "Main navigation",
+    "open_navigation": "Open navigation",
+    "close_navigation": "Close navigation",
+    "language": "Choose language",
+    "theme": "Choose theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "platforms": "Supported platforms",
+    "github": "GitHub",
+    "view_image": "View full illustration",
+    "feature_more": "Explore features",
+    "download": "Open the standings",
+    "release_notes": "Source repository",
+    "documentation": "Documentation",
+    "source": "Source repository",
+    "illustration": "First steps",
+    "license": "Source and usage terms"
+  },
+  "hero": {
+    "title": [
+      "Follow school contest ratings across rounds"
+    ],
+    "description": [
+      "Browse the standings, individual competitors and school OI contests. The initial backup contains 53 competitors and 108 contests."
+    ],
+    "primary_action": "Open the standings",
+    "secondary_action": "Explore features"
+  },
+  "preview": {
+    "caption": "First steps",
+    "tabs": [
+      {
+        "label": "Get started",
+        "icon": "book"
+      }
+    ],
+    "items": [
+      {
+        "title": "Browse the standings",
+        "description": "Open the site and select a competitor or contest to review.",
+        "icon": "book"
+      },
+      {
+        "title": "Keep your edits",
+        "description": "After importing or adjusting results, export JSON from Settings to carry the data to another browser.",
+        "icon": "link"
+      }
+    ]
+  },
+  "features": {
+    "title": "Project features",
+    "groups": [
+      {
+        "title": "Results and analysis",
+        "description": "Locate a competitor on the leaderboard, then inspect contest results and the analysis view.",
+        "detail": "",
+        "icon": "layers"
+      },
+      {
+        "title": "Local changes",
+        "description": "Imported results stay in the current browser. Export a JSON backup or reload the published data from Settings.",
+        "detail": "",
+        "icon": "book"
+      }
+    ]
+  },
+  "getting_started": {
+    "title": "Get started · {project}",
+    "steps": [
+      {
+        "title": "Browse the standings",
+        "description": "Open the site and select a competitor or contest to review.",
+        "icon": "book"
+      },
+      {
+        "title": "Keep your edits",
+        "description": "After importing or adjusting results, export JSON from Settings to carry the data to another browser.",
+        "icon": "link"
+      }
+    ]
+  },
+  "community": {
+    "title": "Community · {project}",
+    "description": "Find usage guidance, follow discussions and review changes to this project.",
+    "links": [
+      {
+        "label": "Help and feedback",
+        "description": "Browse existing reports or describe a reproducible problem.",
+        "icon": "book"
+      },
+      {
+        "label": "Source repository",
+        "description": "Find the project and its maintenance links.",
+        "icon": "link"
+      },
+      {
+        "label": "Review changes",
+        "description": "Review open pull requests or prepare a contribution.",
+        "icon": "code"
+      }
+    ]
+  },
+  "footer": {
+    "copyright": "{copyright}"
+  }
+}

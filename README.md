@@ -43,3 +43,7 @@ python3 -m http.server 8080 --bind 127.0.0.1
 ## 本机原始归档
 
 本机 `archive/` 保存原始 HTML、数据接口响应、提供的 JSON、来源和 SHA-256 清单。原始归档、测试截图和 Python 虚拟环境不提交到公开仓库。抓取只读取站点入口及其直接引用的数据接口；没有源服务器代码。
+
+## 项目网站
+
+下载或克隆仓库后，用浏览器打开[中文首页](project-website/site/index.html)或 [English homepage](project-website/site/en/index.html)。两个版本都可以离线阅读。
