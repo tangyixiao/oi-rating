@@ -4,11 +4,75 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>OI 校内模拟赛 Rating 系统</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2563eb">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="description" content="sxyz 校内 OI 模拟赛 Rating 榜单与数据分析">
 <style>
 :root{
   --bg:#f3f4f6; --card:#fff; --text:#1f2937; --muted:#6b7280;
   --border:#e5e7eb; --primary:#2563eb; --primary-d:#1d4ed8;
   --green:#16a34a; --red:#dc2626; --radius:10px;
+}
+/* ---------- 深色模式 ---------- */
+[data-theme="dark"]{
+  --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --muted:#94a3b8;
+  --border:#334155; --primary:#3b82f6; --primary-d:#60a5fa;
+  --green:#4ade80; --red:#f87171;
+}
+[data-theme="dark"] body{background:var(--bg)}
+[data-theme="dark"] header{background:var(--card);border-bottom-color:var(--border)}
+[data-theme="dark"] .modal-box{background:var(--card)}
+[data-theme="dark"] .contest-item{background:var(--card)}
+[data-theme="dark"] input,[data-theme="dark"] select{background:#0f172a;color:var(--text);border-color:var(--border)}
+[data-theme="dark"] table.tbl th{background:#243044;color:#cbd5e1}
+[data-theme="dark"] table.tbl th,[data-theme="dark"] table.tbl td{border-bottom-color:#2b3a52}
+[data-theme="dark"] table.tbl tbody tr:hover{background:#243044}
+[data-theme="dark"] .tab:hover{background:#334155;color:#fff}
+[data-theme="dark"] .tab.active{background:#1e3a8a;color:#bfdbfe}
+[data-theme="dark"] .btn{background:#243044;color:var(--text);border-color:var(--border)}
+[data-theme="dark"] .btn:hover{background:#334155}
+[data-theme="dark"] .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+[data-theme="dark"] .dropzone{background:#1a2436;border-color:#475569}
+/* 统计卡：浅色模式下是白底，深色模式必须跟着变，否则浅字压在白底上看不见 */
+[data-theme="dark"] .stat{background:var(--card)}
+[data-theme="dark"] .toolbar{border-bottom-color:var(--border)}
+/* ---------- 徽章 / 进度条 / 战报 ---------- */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;
+  font-size:12px;font-weight:600;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;margin:3px 4px 3px 0}
+.badge.gold{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+.badge.rec{background:#dcfce7;color:#166534;border-color:#86efac}
+[data-theme="dark"] .badge{background:#1e293b;color:#c7d2fe;border-color:#3730a3}
+[data-theme="dark"] .badge.gold{background:#3b2f0b;color:#fcd34d;border-color:#78350f}
+[data-theme="dark"] .badge.rec{background:#0b2e1a;color:#86efac;border-color:#166534}
+.bar-wrap{display:inline-block;width:100%;max-width:220px;height:9px;background:#e5e7eb;border-radius:5px;overflow:hidden;vertical-align:middle}
+[data-theme="dark"] .bar-wrap{background:#334155}
+.bar-fill{height:100%;background:var(--primary)}
+.bar-fill.b{background:#f59e0b}
+.report-box{white-space:pre-wrap;font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:13px;
+  background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px;line-height:1.75;overflow:auto}
+[data-theme="dark"] .report-box{background:#0f172a}
+.rec-row{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px dashed var(--border)}
+.rec-row:last-child{border-bottom:none}
+.rec-row .ico{font-size:17px;width:22px;flex:none}
+.rec-row .lbl{color:var(--muted);font-size:12px;min-width:132px;flex:none}
+/* ---------- 分析页三个子块 ---------- */
+.an-group{display:none}
+.an-group.active{display:block}
+[data-an]{opacity:.75}
+[data-an].primary{opacity:1}
+/* ---------- 移动端 ---------- */
+@media (max-width:680px){
+  header{padding:8px 10px;gap:8px;height:auto;flex-wrap:wrap}
+  .brand{font-size:14px;order:1}
+  header nav{order:3;width:100%;overflow-x:auto;flex:none}
+  .tab{padding:6px 10px;font-size:13px;white-space:nowrap}
+  main{padding:10px}
+  .card{padding:12px}
+  .stat .v{font-size:18px}
+  table.tbl{font-size:12px}
+  .report-box{font-size:12px}
+  .rec-row .lbl{min-width:96px}
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
@@ -59,6 +123,13 @@ table.tbl td.num,table.tbl th.num{text-align:right;font-variant-numeric:tabular-
 .neg{color:var(--red);font-weight:600}
 .zero{color:var(--muted)}
 .rating{font-weight:700;font-variant-numeric:tabular-nums}
+/* 作弊（击杀）：总分 -1，棕色 */
+.cheat-score{color:#8b4513;font-weight:700}
+[data-theme="dark"] .cheat-score{color:#d2a679}
+.cheat-tag{font-size:11px;color:#8b4513;background:#fdf0e3;border:1px solid #e0c3a3;
+  border-radius:5px;padding:0 5px;margin-left:4px;white-space:nowrap}
+[data-theme="dark"] .cheat-tag{color:#e8c39e;background:#3a2a1a;border-color:#6b4a2f}
+tr.cheat-row{background:rgba(139,69,19,.05)}
 .empty{padding:40px;text-align:center;color:var(--muted)}
 .contest-item{border:1px solid var(--border);border-radius:8px;padding:12px 14px;
               margin-bottom:10px;background:#fff}
@@ -91,18 +162,13 @@ select.sel-match{padding:5px 8px;font-size:12px;min-width:180px}
 .toolbar .spacer{flex:1}
 .rating-cell{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;width:100%}
 .rating-bar{display:inline-block;width:3px;height:14px;border-radius:2px;vertical-align:middle}
+/* 红黑名（≥ 2600）：首字母黑、其余红 */
 .legend-name{font-weight:800;letter-spacing:.3px;
              text-shadow:0 0 1px rgba(220,0,0,.45), 0 0 3px rgba(220,0,0,.18)}
 .legend-name .l1{color:#000}
 .legend-name .l2{color:#e11}
-@media (max-width: 680px) {
-  header { height:auto; padding:10px 12px; gap:8px; flex-wrap:wrap; }
-  nav { flex:none; width:100%; overflow-x:auto; }
-  .tab { white-space:nowrap; flex-shrink:0; padding:8px 12px; }
-  main { padding:12px; }
-  .card { padding:14px; }
-  .modal { padding:10px; }
-}
+/* 深色模式下"黑"看不见，改成浅色 */
+[data-theme="dark"] .legend-name .l1{color:#fff}
 </style>
 </head>
 <body>
@@ -117,6 +183,11 @@ select.sel-match{padding:5px 8px;font-size:12px;min-width:180px}
     <button class="tab" data-tab="analysis">分析</button>
     <button class="tab" data-tab="settings">设置</button>
   </nav>
+  <button class="btn small" id="btnTheme" title="切换深色 / 浅色模式">🌙</button>
+  <!-- OPEN：跳到云端版（同一份数据）。换域名时改这行 href 即可 -->
+  <a class="btn small primary" id="btnOpenServer" href="https://sxyz-elo-rating.pages.dev" target="_blank" rel="noopener"
+     style="text-decoration:none;white-space:nowrap"
+     title="OPEN：打开云端版（数据存在 Cloudflare 上，所有人看到同一份榜单）">🌐 OPEN</a>
 </header>
 
 <main>
@@ -192,81 +263,194 @@ select.sel-match{padding:5px 8px;font-size:12px;min-width:180px}
 <section class="panel" id="panel-analysis">
   <div class="stat-row" id="analysisStatRow"></div>
 
-  <div class="card">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <h2 style="margin:0">选手数据总表</h2>
-      <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <input type="text" id="anSearch" placeholder="搜索选手…" style="width:130px">
-        <select id="anRoster" style="width:auto;min-width:150px">
-          <option value="active">只看现役（180 天内）</option>
-          <option value="all">全部选手</option>
-        </select>
-        <select id="anSort" style="width:auto;min-width:170px">
-          <option value="rating">排序：Rating</option>
-          <option value="beatRate">排序：胜率</option>
-          <option value="pairWinRate">排序：对局胜率</option>
-          <option value="avgRank">排序：平均名次</option>
-          <option value="podium">排序：前三次数</option>
-          <option value="wins">排序：夺冠次数</option>
-          <option value="akCount">排序：AK 次数</option>
-          <option value="avgPerf">排序：平均 Performance</option>
-          <option value="avgTotal">排序：场均总分</option>
-          <option value="matches">排序：参赛场次</option>
-          <option value="form5">排序：近 5 场净变化</option>
-        </select>
-      </div>
+  <div class="card" style="padding:12px 16px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn small" data-an="achieve">🏅 成就</button>
+      <button class="btn small" data-an="contest">📅 比赛</button>
+      <button class="btn small" data-an="player">👤 人物分析</button>
+      <button class="btn small" data-an="compare">⚔️ 选手对比</button>
+      <span class="muted" id="anHint" style="margin-left:auto;font-size:12px"></span>
     </div>
-    <div class="table-wrap" id="analysisTable"></div>
-    <p class="muted" id="analysisNote" style="margin-bottom:0"></p>
   </div>
 
-  <div class="card">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <h2 style="margin:0">选手画像</h2>
-      <div style="margin-left:auto">
-        <select id="anPlayer" style="width:auto;min-width:220px"></select>
-      </div>
+  <!-- ============ 成就 ============ -->
+  <div class="an-group" id="anGroup-achieve">
+    <div class="card">
+      <h2>🏅 纪录墙</h2>
+      <p class="muted" style="margin-top:-6px">各项纪录的历史保持者。</p>
+      <div id="recordBox"></div>
     </div>
-    <div id="analysisProfile"></div>
+
+    <div class="card">
+      <h2>🎖 成就徽章</h2>
+      <p class="muted" style="margin-top:-6px">按历史表现自动授予，鼠标悬停看条件。</p>
+      <div id="badgeBox"></div>
+    </div>
   </div>
 
-  <div class="card">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <h2 style="margin:0">🩺 数据体检</h2>
-      <div style="margin-left:auto">
-        <button class="btn small" id="btnHealth2">重新扫描</button>
+  <!-- ============ 比赛 ============ -->
+  <div class="an-group" id="anGroup-contest">
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <h2 style="margin:0">🏆 赛后战报</h2>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <select id="reportContest" style="width:auto;min-width:200px"></select>
+          <button class="btn small primary" id="btnReportCopy">📋 复制战报</button>
+        </div>
       </div>
+      <p class="muted" style="margin-top:-6px">选一场比赛 → 生成一段可以直接粘贴到群里的文字。默认最新一场。</p>
+      <div class="report-box" id="reportBox"></div>
     </div>
-    <p class="muted" style="margin-top:-6px">自动扫描重复导入、同名同日、样本过少、长期停赛等问题。只读，不会改动任何 Rating。</p>
-    <div id="healthBox"></div>
+
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <h2 style="margin:0">📚 题目难度表（逐场逐题）</h2>
+        <div style="margin-left:auto">
+          <select id="probSort" style="width:auto;min-width:150px">
+            <option value="hard">最难的在前</option>
+            <option value="easy">最易的在前</option>
+            <option value="recent">最近的比赛在前</option>
+          </select>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:-6px">
+        每条记录是「<b>某一场里的某一道题</b>」，<b>不按题名跨场合并</b> ——
+        同名未必同题（tree / number 这类通用名在不同比赛里是完全不同的题），同一题也可能改名；
+        而且难度是当场属性（跟当场参赛者水平有关），跨场平均会把不同水平的池子混在一起。
+      </p>
+      <div class="table-wrap" id="probBox"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <h2 style="margin:0">📈 全局等级分曲线</h2>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <select id="curveHighlight" style="width:auto;min-width:170px">
+            <option value="">高亮：不选</option>
+          </select>
+          <select id="curveRange" style="width:auto;min-width:140px">
+            <option value="all">全部比赛</option>
+            <option value="20">最近 20 场</option>
+            <option value="10">最近 10 场</option>
+          </select>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:-6px">
+        所有选手的 Rating 曲线叠在一起看整体趋势。细线 = 每个人；
+        只有你在右上角手动选中的那位会加粗成红线。鼠标悬停在任意曲线上能看到名字。
+      </p>
+      <div id="curveBox"></div>
+    </div>
+  </div>
+
+  <!-- ============ 人物分析 ============ -->
+  <div class="an-group" id="anGroup-player">
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <h2 style="margin:0">选手数据总表</h2>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="anSearch" placeholder="搜索选手…" style="width:130px">
+          <select id="anRoster" style="width:auto;min-width:150px">
+            <option value="active">只看现役（180 天内）</option>
+            <option value="all">全部选手</option>
+          </select>
+          <select id="anSort" style="width:auto;min-width:170px">
+            <option value="rating">排序：Rating</option>
+            <option value="beatRate">排序：胜率</option>
+            <option value="pairWinRate">排序：对局胜率</option>
+            <option value="avgRank">排序：平均名次</option>
+            <option value="podium">排序：前三次数</option>
+            <option value="wins">排序：夺冠次数</option>
+            <option value="akCount">排序：AK 次数</option>
+            <option value="avgPerf">排序：平均 Performance</option>
+            <option value="avgTotal">排序：场均总分</option>
+            <option value="matches">排序：参赛场次</option>
+            <option value="form5">排序：近 5 场净变化</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap" id="analysisTable"></div>
+      <p class="muted" id="analysisNote" style="margin-bottom:0"></p>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <h2 style="margin:0">选手画像</h2>
+        <div style="margin-left:auto">
+          <select id="anPlayer" style="width:auto;min-width:220px"></select>
+        </div>
+      </div>
+      <div id="analysisProfile"></div>
+    </div>
+
+  </div>
+
+  <!-- ============ 选手对比 ============ -->
+  <div class="an-group" id="anGroup-compare">
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <h2 style="margin:0">⚔️ 选手对比</h2>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <select id="cmpA" style="width:auto;min-width:150px"></select>
+          <span class="muted">vs</span>
+          <select id="cmpB" style="width:auto;min-width:150px"></select>
+          <button class="btn small" id="btnCmpSwap" title="把左右两人对调">⇄ 交换</button>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:-6px">
+        只看交手胜率：胜 = 两人同场时名次更高，平 = 名次相同，只统计双方都参加的比赛。
+      </p>
+      <div id="cmpBox"></div>
+    </div>
   </div>
 </section>
 
 <section class="panel" id="panel-settings">
   <div class="card">
-    <h2>Rating 参数</h2>
-    <div class="grid">
-      <label>初始 / 中心 Rating<input type="number" id="sInit" value="1500"></label>
-      <label>基础 K 值（每场变化幅度）<input type="number" id="sBaseK" value="200" step="8" min="16" max="512"></label>
-      <label>单场最大变化<input type="number" id="sMaxDelta" value="300"></label>
-      <label>Rating 下限<input type="number" id="sMin" value="0"></label>
-      <label>Rating 上限<input type="number" id="sMax" value="4000"></label>
-      <label>名次奖金权重（0~1）<input type="number" id="sNameBonus" value="0.5" step="0.1" min="0" max="1"></label>
-      <label>名次奖金随 Rating 变化强度（-1~1）<input type="number" id="sRatingSlope" value="0.5" step="0.1" min="-1" max="1"></label>
-      <label>🏆 领奖台奖励强度（0~2，越大前三差距越大）<input type="number" id="sPodiumBonus" value="0.6" step="0.1" min="0" max="2"></label>
-      <label>红黑名门槛（Rating ≥ 此值显示红黑名）<input type="number" id="sLegend" value="3000"></label>
-    </div>
-    <div class="actions">
-      <button class="btn primary" id="btnSaveSettings">保存并重算</button>
-    </div>
-    <p class="muted">
-      模型：Elo 变体 + 名次奖金 + <b>领奖台奖励</b> + 零和约束。<br>
-      · 距离中心 Rating 越远，K 系数越小（最低为中心的 30%），<b>低分和高分变化都会变慢</b>；<br>
-      · <b>名次奖金随当前 Rating 变化</b>：低分选手拿高名次奖励更多（追赶机制）；<br>
-      · <b>领奖台奖励</b>：第 1 名 100%、第 2 名 45%、第 3 名 15%、第 4 名往后 0%，用来拉开前三名的差距；<br>
-      · 每场涨跌总和强制为 0，不会集体掉分；<br>
-      · Rating ≥ 门槛时选手名显示为<b>红黑名</b>（首字母黑、其余红）。
+    <h2>🔐 管理员</h2>
+    <p class="muted" style="margin-top:-6px">
+      登录后才会出现「导入成绩」入口，以及勘误 / 删除 / 合并 / 上传云端等功能。不登录也能看总榜和分析。
     </p>
+    <div class="actions" id="adminLoginRow">
+      <input type="password" id="adminPass" placeholder="管理员口令" style="width:200px" autocomplete="off">
+      <button class="btn primary" id="btnAdminLogin">登录</button>
+    </div>
+    <div class="actions" id="adminLogoutRow" style="display:none">
+      <button class="btn danger" id="btnAdminLogout">退出登录</button>
+      <button class="btn primary" id="btnCloudPush">⬆ 立即上传到云端</button>
+      <button class="btn" id="btnCloudPull">⬇ 从云端刷新</button>
+    </div>
+    <p class="muted" id="adminStatus">当前：未登录（只读）</p>
+    <p class="muted" id="cloudStatus">本机模式</p>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <h2 style="margin:0">🩺 数据体检</h2>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn small" id="btnCleanPhantom" title="删除那些全 0 的空题目列（P5/P6/P7）">🧹 清理空题目列</button>
+        <button class="btn small" id="btnHealth2">重新扫描</button>
+      </div>
+    </div>
+    <p class="muted" style="margin-top:-6px">
+      自动扫描重复导入、同名同日、空题目列、样本过少、长期停赛等问题。
+      <b>只读</b>，不会改动任何 Rating（除了你主动点「清理空题目列」）。
+    </p>
+    <div id="healthBox"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <h2 style="margin:0">🙈 隐藏选手（暂时不参与计算）</h2>
+      <div style="margin-left:auto"><span class="muted" id="hiddenCount"></span></div>
+    </div>
+    <p class="muted" style="margin-top:-6px">
+      被隐藏的选手会从<b>总榜 / 分析页</b>消失，成绩也<b>不进入任何一场结算</b>——
+      别人那几场的名次、Performance、零和分摊都按"去掉他"重算；他本人也<b>不再保留任何等级分</b>（名字灰、Rating 显示 —）。<br>
+      「暂时」＝随时可以一键恢复，恢复后从头重算。隐藏名单会随数据一起同步到云端，所有访问者看到同一份。
+      切换需要管理员登录。
+    </p>
+    <div class="table-wrap" id="hiddenBox" style="max-height:40vh"></div>
   </div>
 
   <div class="card">
@@ -286,22 +470,10 @@ select.sel-match{padding:5px 8px;font-size:12px;min-width:180px}
       <input type="file" id="jsonInput" accept=".json" style="display:none">
       <button class="btn danger" id="btnClear">清空所有数据</button>
     </div>
-  </div>
-
-  <div class="card">
-    <h2>公开数据与本机修改</h2>
-    <p class="muted" style="margin-top:-6px">
-      初始榜单来自公开备份。导入成绩、修改选手和设置只保存在当前浏览器。
-      可导出 JSON 备份；更新公开榜单时，将备份替换到 GitHub 仓库的 data.json 并提交。
+    <p class="muted" style="margin-top:8px">
+      云端：读取对所有人开放，写入需要管理员登录。数据同时存在本机与 Cloudflare KV。
     </p>
-    <div class="actions">
-      <button class="btn" id="btnCloudPull">重新载入公开数据</button>
-      <a class="btn" href="project-website/site/index.html" style="text-decoration:none">使用指南</a>
-      <a class="btn" href="https://github.com/tangyixiao/oi-rating" target="_blank" rel="noopener noreferrer" style="text-decoration:none">GitHub 仓库</a>
-    </div>
-    <p class="muted" id="cloudStatus">正在读取公开数据…</p>
   </div>
-
 </section>
 
 </main>
@@ -326,6 +498,14 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num = s => { const m = String(s ?? '').replace(/,/g,'').match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; };
 const today = () => new Date().toISOString().slice(0,10);
+
+/* 深色 / 浅色主题 */
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('oi-rating-theme', t); } catch (e) {}
+  const b = (typeof document.getElementById === 'function') ? document.getElementById('btnTheme') : null;
+  if (b) b.textContent = (t === 'dark') ? '☀️' : '🌙';
+}
 const isStdName = s => /^std/i.test(String(s ?? '').trim());
 
 function toast(msg, ms = 2200) {
@@ -346,6 +526,18 @@ function ratingColor(r) {
   return '#ff0000';
 }
 
+/* 题目得分颜色：每题满分 100，按分数段上色
+   0-29 红 / 30-49 橙 / 50-79 黄 / 80-100 绿。想调档位只改这几行。 */
+const FULL_SCORE = 100;
+
+function scoreColor(score) {
+  const s = Number(score) || 0;
+  if (s < 30) return '#e02b2b';   // 红
+  if (s < 50) return '#f97316';   // 橙（纯橙，别偏红）
+  if (s < 80) return '#eab308';   // 黄（纯黄，别偏棕）
+  return '#1ea34a';               // 绿
+}
+
 function colorBar(r, label) {
   return `<span class="rating-cell">
     <span class="rating-bar" style="background:${ratingColor(r)}"></span>
@@ -353,23 +545,53 @@ function colorBar(r, label) {
   </span>`;
 }
 
-const LEGEND_THRESHOLD = 3000;
+/* 红黑名的起步分数：≥ 这一档，名字变成「首字母黑、其余红」。 */
+const LEGEND_THRESHOLD = 2600;
+
+/* ============================================================
+ *  击杀作弊者（2026-11-19）
+ *    · 作用范围：**只 ban 掉作弊的那一场**（比赛勘误里逐场标记）
+ *    · 该场他的总分钉成 CHEAT_SCORE = -1，棕色显示，名次自然垫底
+ *    · 但**照常参与排名与 Rating 结算**，所以那场他会大幅掉分
+ *    · 每场独立：另一场没标记就照常算
+ * ============================================================ */
+const CHEAT_SCORE = -1;      // 作弊场的总分
+const CHEAT_COLOR = '#8b4513';   // 棕色（saddle brown）
+
+const isCheatRow = r => !!r && r.cheated === true;
 
 function nameHtml(name, rating) {
   const raw = String(name ?? '');
-  const thr = (typeof state !== 'undefined' && state?.settings?.legendThreshold) || LEGEND_THRESHOLD;
-  if (rating != null && rating >= thr && raw.length > 0) {
-    const first = esc(raw[0]);
-    const rest  = esc(raw.slice(1));
-    return `<span class="legend-name"><span class="l1">${first}</span><span class="l2">${rest}</span></span>`;
+  if (!raw) return '';
+  if (rating != null && rating >= LEGEND_THRESHOLD) {
+    return `<span class="legend-name"><span class="l1">${esc(raw[0])}</span>`
+         + `<span class="l2">${esc(raw.slice(1))}</span></span>`;
   }
-  return `<span style="color:${ratingColor(rating ?? 0)}">${esc(raw)}</span>`;
+  // 没有等级分（隐藏选手）→ 黑名：不套任何档位色，用默认文字色
+  if (rating == null) return `<span>${esc(raw)}</span>`;
+  return `<span style="color:${ratingColor(rating)}">${esc(raw)}</span>`;
 }
 
 /* ============================================================
  *  1. 状态与持久化
  * ============================================================ */
-const STORAGE_KEY = 'oi-rating-github-v1';
+const STORAGE_KEY = 'oi-rating-system-v5';
+
+/* 模型参数：写死。想改请改这里（并重新部署），界面上不再提供输入框。 */
+const FIXED_SETTINGS = Object.freeze({
+  initialRating:    1500,   // 初始 / 中心 Rating
+  baseK:            320,    // 基础 K 值
+  maxDelta:         300,    // 单场最大变化
+  minRating:       -4000,   // Rating 下限
+  maxRating:        5000,   // Rating 上限
+  nameBonusRatio:   0.4,    // 名次奖金权重（低分拿高名次奖励更多）
+  ratingSlope:      0.8,    // 名次奖金随 Rating 变化强度
+  podiumBonusRatio: 0.1,    // 领奖台奖励强度
+  perfScale:        0.3,    // ★ 表现分项权重：kOf × (perf − 当前Rating)/400 × perfScale
+  center:           1500,   // K 收缩的中心
+  kSpread:          1200,   // K 收缩的跨度
+  kMinRatio:        0.3,    // 最远处 K 的最小比例
+});
 
 const defaultState = () => ({
   version: 5,
@@ -377,17 +599,8 @@ const defaultState = () => ({
   contests: [],
   nextUserId: 1,
   nextContestId: 1,
-  settings: {
-    initialRating: 1500,
-    baseK: 200,
-    maxDelta: 300,
-    minRating: 0,
-    maxRating: 4000,
-    nameBonusRatio: 0.5,
-    ratingSlope: 0.5,
-    podiumBonusRatio: 0.6,
-    legendThreshold: 3000
-  }
+  hiddenUsers: [],          // 临时隐藏（不参与计算）的选手 id
+  settings: { ...FIXED_SETTINGS }
 });
 
 let state = defaultState();
@@ -398,90 +611,233 @@ function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) state = Object.assign(defaultState(), JSON.parse(raw));
-    if (state.settings.legendThreshold == null) state.settings.legendThreshold = 3000;
-    if (state.settings.ratingSlope == null)     state.settings.ratingSlope = 0.5;
-    if (state.settings.podiumBonusRatio == null) state.settings.podiumBonusRatio = 0.6;
+    state.settings = { ...FIXED_SETTINGS };   // 模型参数写死，忽略存档里的旧值
+    normalizeHidden();
   } catch (e) { console.error(e); }
 }
 function saveState() {
-  state.updatedAt = Date.now();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    localStorage.setItem(STORAGE_KEY + '-dirty', '1');   // 本机已修改公开快照
+    localStorage.setItem(STORAGE_KEY + '-dirty', '1');   // 本地有未上传的改动
   }
   catch (e) { console.error(e); }
   scheduleCloudSave();
 }
 
 /* ============================================================
- *  1.5 GitHub Pages：公开快照 + 浏览器本机编辑
+ *  1.5 云同步（可选）：同源 /api/data 读写共享数据
+ *      · 没有后端时完全不影响使用（自动退回 localStorage）
+ *      · 读取公开，写入需要管理口令
  * ============================================================ */
-const CLOUD = { api: 'data.json', online: false, dirty: false, updatedAt: 0 };
+const CLOUD = {
+  api: 'api/data',
+  token: '',
+  online: false,
+  dirty: false,
+  updatedAt: 0,
+  timer: null,
+  lastLocalEdit: 0
+};
 
 function cloudStatusText() {
-  if (CLOUD.dirty) return '本机有修改：已保存在当前浏览器，可导出 JSON 备份';
-  if (CLOUD.online) return `公开数据快照 · 更新时间 ${new Date(CLOUD.updatedAt).toLocaleString()}`;
-  return '尚未读取公开数据；已有的本机数据仍然保留';
+  if (CLOUD.online && !CLOUD.token) return '只读模式：能看到大家的榜单，改动只存在本机、不会同步';
+  if (!CLOUD.token && !CLOUD.online) return '本机模式（数据只存在这台设备的浏览器里）';
+  if (CLOUD.dirty) return '有改动待上传…';
+  if (CLOUD.online) return `已连接云端 · 最后同步 ${new Date(CLOUD.updatedAt || Date.now()).toLocaleString()}`;
+  return '未连接云端';
 }
-
 function renderCloudStatus() {
   const el = $('cloudStatus');
   if (el) el.textContent = cloudStatusText();
+  // 只读徽标：连上了云端但没填口令时，标题旁边挂一个「只读」
+  try {
+    const brand = document.querySelector('.brand');
+    if (brand) {
+      let b = document.getElementById('roBadge');
+      const ro = CLOUD.online && !CLOUD.token;
+      if (ro && !b) {
+        b = document.createElement('span');
+        b.id = 'roBadge';
+        b.textContent = '只读';
+        b.title = '只读模式：需要管理口令才能修改数据（设置 → 云同步）';
+        b.style.cssText = 'font-size:11px;font-weight:600;color:#b45309;background:#fef3c7;'
+          + 'border:1px solid #fcd34d;border-radius:6px;padding:1px 6px;margin-left:8px;vertical-align:middle';
+        brand.appendChild(b);
+      } else if (!ro && b) { b.remove(); }
+    }
+  } catch (e) { /* 无 DOM 环境（测试）时忽略 */ }
 }
 
-function canEdit() { return true; }
+/* ============================================================
+ *  1.6 管理员登录
+ *      口令写死在前端，只用来控制界面（导入/编辑/上传的按钮是否出现）；
+ *      真正的写入权限仍由服务端的 ADMIN_TOKEN 校验，两边用的是同一个口令。
+ * ============================================================ */
+const ADMIN_PASS = 'mmaitcy01';
+const ADMIN_FLAG = 'oi-rating-admin';
+
+let isAdmin = false;
+let currentTab = 'import';
+
+function adminLogin(pass) {
+  if (String(pass ?? '').trim() !== ADMIN_PASS) return false;
+  isAdmin = true;
+  CLOUD.token = ADMIN_PASS;
+  try {
+    localStorage.setItem(ADMIN_FLAG, '1');
+    localStorage.setItem('oi-rating-token', ADMIN_PASS);
+  } catch (e) {}
+  renderAdminUI();
+  renderAll();
+  toast('已登录管理员', 2000);
+  return true;
+}
+
+function adminLogout() {
+  isAdmin = false;
+  CLOUD.token = '';
+  try {
+    localStorage.removeItem(ADMIN_FLAG);
+    localStorage.removeItem('oi-rating-token');
+  } catch (e) {}
+  renderAdminUI();
+  renderAll();
+  toast('已退出，回到只读模式', 2200);
+}
+
+function restoreAdmin() {
+  try {
+    isAdmin = localStorage.getItem(ADMIN_FLAG) === '1';
+  } catch (e) { isAdmin = false; }
+  CLOUD.token = isAdmin ? ADMIN_PASS : '';
+}
+
+/* 同步所有"只有管理员能用"的界面元素 */
+function renderAdminUI() {
+  const row = $('adminLoginRow'), out = $('adminLogoutRow');
+  if (row) row.style.display = isAdmin ? 'none' : 'flex';
+  if (out) out.style.display = isAdmin ? 'flex' : 'none';
+  const st = $('adminStatus');
+  if (st) st.textContent = isAdmin
+    ? '当前：已登录管理员（可以导入成绩、勘误、上传云端）'
+    : '当前：未登录（只读 —— 不会有导入/编辑按钮）';
+  // 「导入成绩」标签页只对管理员显示
+  document.querySelectorAll('.tab').forEach(t => {
+    if (!t.dataset || t.dataset.tab !== 'import') return;
+    if (t.style) t.style.display = isAdmin ? '' : 'none';
+  });
+  if (!isAdmin && currentTab === 'import') switchTab('rating');
+  renderCloudStatus();
+}
+
+/* 编辑权限：必须登录管理员 */
+function canEdit() { return isAdmin; }
 
 async function cloudFetchData() {
   try {
     const r = await fetch(CLOUD.api, { cache: 'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
-    if (!data || !Array.isArray(data.users) || !Array.isArray(data.contests)) {
-      throw new Error('公开数据格式不正确');
-    }
+    const j = await r.json();
+    if (!j || !Array.isArray(j.users) || !Array.isArray(j.contests)) throw new Error('云端数据格式不正确');
     CLOUD.online = true;
-    CLOUD.updatedAt = data.updatedAt || 0;
-    return data;
+    return j;
   } catch (e) {
     CLOUD.online = false;
-    toast('公开数据读取失败，已保留本机数据。请稍后在设置中重试。', 5000);
-    renderCloudStatus();
     return null;
   }
 }
 
+async function cloudPush(silent) {
+  if (!CLOUD.token) { if (!silent) toast('未设置云端口令：数据只保存在本机'); return false; }
+  try {
+    const r = await fetch(CLOUD.api, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': CLOUD.token },
+      body: JSON.stringify(state)
+    });
+    if (r.status === 403) { toast('云端口令不正确，上传被拒绝'); return false; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json().catch(() => ({}));
+    CLOUD.online = true; CLOUD.dirty = false;
+    CLOUD.updatedAt = j.updatedAt || Date.now();
+    localStorage.removeItem(STORAGE_KEY + '-dirty');
+    renderCloudStatus();
+    if (!silent) toast('已上传到云端');
+    return true;
+  } catch (e) {
+    if (!silent) toast('云端上传失败：' + e.message + '（数据仍保存在本机）');
+    return false;
+  }
+}
+
 function scheduleCloudSave() {
+  CLOUD.lastLocalEdit = Date.now();
+  if (!CLOUD.token) { renderCloudStatus(); return; }
   CLOUD.dirty = true;
   renderCloudStatus();
+  clearTimeout(CLOUD.timer);
+  CLOUD.timer = setTimeout(() => cloudPush(true), 1500);
 }
 
+/* 启动时：本机有未上传的改动就优先用本机，否则取较新的那一份 */
 function adoptState(data) {
   state = Object.assign(defaultState(), data);
-  state.settings = Object.assign(defaultState().settings, data.settings || {});
+  state.settings = { ...FIXED_SETTINGS };   // 模型参数写死
+  normalizeHidden();                        // 隐藏名单只保留仍存在的选手 id
+  ANALYSIS = null;                          // 统计缓存必须失效，否则会读到旧/空数据
+  DIFF_CACHE = {};
 }
 
-function usePublishedData(data) {
-  adoptState(data);
-  recalculateAll();
-  CLOUD.dirty = false;
-  localStorage.removeItem(STORAGE_KEY + '-dirty');
-  renderAll();
-  loadSettingsUI();
+function cloudBoot() {
   renderCloudStatus();
-}
+  const localDirty = localStorage.getItem(STORAGE_KEY + '-dirty') === '1';
+  cloudFetchData().then(remote => {
+    renderCloudStatus();
+    if (!remote) return;
+    CLOUD.updatedAt = remote.updatedAt || 0;
 
-async function cloudBoot() {
-  CLOUD.dirty = localStorage.getItem(STORAGE_KEY + '-dirty') === '1';
-  renderCloudStatus();
-  const remote = await cloudFetchData();
-  if (!CLOUD.dirty && localStorage.getItem(STORAGE_KEY + '-dirty') === '1') {
-    CLOUD.dirty = true;
-    loadState();
-    renderAll();
-    loadSettingsUI();
-  }
-  if (remote && !CLOUD.dirty) usePublishedData(remote);
-  renderCloudStatus();
+    // ① 只读模式（没填口令）：云端永远为准。
+    //    否则同学在页面上随手点一下，本机就会留下一份旧数据，之后一直看不到新榜单。
+    if (!CLOUD.token) {
+      adoptState(remote);
+      recalculateAll();
+      renderAll();
+      loadSettingsUI();
+      renderCloudStatus();
+      localStorage.removeItem(STORAGE_KEY + '-dirty');
+      return;
+    }
+
+    // ② 管理员：本机有未上传的改动就保住本机，否则用较新的那份
+    const localHasData = state.users.length > 0 || state.contests.length > 0;
+    if (!localHasData || (!localDirty && CLOUD.updatedAt > (state.updatedAt || 0))) {
+      adoptState(remote);
+      recalculateAll();
+      renderAll();
+      loadSettingsUI();
+      renderCloudStatus();
+      toast('已从云端载入最新数据', 2600);
+    }
+    if (localDirty) cloudPush(true);
+  });
+
+  // ③ 每 90 秒自动拉一次，别人上传的改动不用手动刷新
+  setInterval(() => {
+    if (pending) return;                       // 正在导入中，别打断
+    if (CLOUD.token && CLOUD.dirty) return;    // 管理员有没上传的改动，先别覆盖
+    cloudFetchData().then(remote => {
+      if (!remote) return;
+      if ((remote.updatedAt || 0) > (CLOUD.updatedAt || 0)) {
+        CLOUD.updatedAt = remote.updatedAt;
+        adoptState(remote);
+        recalculateAll();
+        renderAll();
+        loadSettingsUI();
+        renderCloudStatus();
+        toast('已同步最新数据', 2000);
+      }
+    });
+  }, 90000);
 }
 
 
@@ -489,6 +845,7 @@ function snapshot() {
   return JSON.stringify({
     users: state.users, contests: state.contests,
     nextUserId: state.nextUserId, nextContestId: state.nextContestId,
+    hiddenUsers: state.hiddenUsers,
     settings: state.settings
   });
 }
@@ -501,9 +858,6 @@ function rollback() {
   if (!snapStack.length) { toast('没有可回滚的快照'); return; }
   const raw = snapStack.pop();
   state = Object.assign(defaultState(), JSON.parse(raw));
-  if (state.settings.legendThreshold == null)  state.settings.legendThreshold = 3000;
-  if (state.settings.ratingSlope == null)      state.settings.ratingSlope = 0.5;
-  if (state.settings.podiumBonusRatio == null) state.settings.podiumBonusRatio = 0.6;
   recalculateAll();
   renderAll();
   renderSnapInfo();
@@ -515,6 +869,30 @@ function renderSnapInfo() {
 }
 
 const findUser = id => state.users.find(u => u.id === id) || null;
+
+/* ============================================================
+ *  临时隐藏选手（不参与计算）
+ *    · state.hiddenUsers 存被隐藏者的 id（随数据一起云同步）
+ *    · 隐藏者的成绩不进入任何一场结算：他不涨不跌，也不作为对手
+ *      影响别人的 Performance / 期望胜率 / 零和分摊
+ *    · 他的 Rating 不保留任何历史值（重算后就是初始分、场次 0），取消隐藏后从头重算恢复
+ * ============================================================ */
+function isHidden(uid) {
+  return Array.isArray(state.hiddenUsers) && state.hiddenUsers.indexOf(uid) >= 0;
+}
+function visibleUsers() {
+  return state.users.filter(u => !isHidden(u.id));
+}
+/* 某场比赛里真正参与结算的成绩（存在且未被隐藏） */
+function visibleResults(c) {
+  return (c.results || []).filter(r => findUser(r.userId) && !isHidden(r.userId));
+}
+/* 清掉已不存在的 id、去重、统一成数字（旧存档没有这个字段也能用） */
+function normalizeHidden() {
+  const ids = new Set(state.users.map(u => u.id));
+  const arr = Array.isArray(state.hiddenUsers) ? state.hiddenUsers : [];
+  state.hiddenUsers = [...new Set(arr.map(Number))].filter(id => ids.has(id));
+}
 
 function findUserByName(name) {
   const n = String(name ?? '').trim();
@@ -544,86 +922,150 @@ function createUser(name) {
 /* ============================================================
  *  2. Rating 算法
  * ============================================================
- *  ★ 领奖台奖励：给前三名额外加成，拉开 rk1/rk2/rk3 的差距
- *     podiumOf(rank) = { 1: 1.00, 2: 0.45, 3: 0.15, else: 0 }
- *     podiumPart = baseK * podiumBonusRatio * podiumOf(rank)
+ *  模型：单场涨跌只看 Performance 和自己的赛前分 ——
+ *        delta = perfGain × (Performance − 赛前分) × 比赛权重
+ *  零和：Performance 由"名次分位"换算，构造上就满足 Σperf = n × 场均分，
+ *        所以每场涨跌总和天然为 0，不需要额外减均值。
+ *  调剂：只保留"并列第一名保底不掉分"，缺口从别人的正分里扣。
  * ============================================================ */
+/* Acklam 正态分位数近似（误差 < 1e-9），把"名次分位"映射成正态 z */
+function normPPF(p) {
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+  if (!(p > 0)) return -6;
+  if (!(p < 1)) return 6;
+  const pl = 0.02425, ph = 1 - pl;
+  let q, r;
+  if (p < pl) {
+    q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5])
+         / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  if (p > ph) {
+    q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5])
+          / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  q = p - 0.5; r = q * q;
+  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q
+       / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+}
+
 function computeRatingChanges(ratings, ranks, opts = {}) {
   const n = ratings.length;
-  const baseK            = opts.baseK            ?? 200;
   const maxDelta         = opts.maxDelta         ?? 300;
+  const baseK            = opts.baseK            ?? 320;
   const center           = opts.center           ?? 1500;
-  const minRatio         = opts.minRatio         ?? 0.3;
   const spread           = opts.spread           ?? 1200;
-  const nameBonusRatio   = opts.nameBonusRatio   ?? 0.5;
-  const ratingSlope      = opts.ratingSlope      ?? 0.5;
-  const podiumBonusRatio = opts.podiumBonusRatio ?? 0.6;
+  const minRatio         = opts.minRatio         ?? 0.3;
+  const nameBonusRatio   = opts.nameBonusRatio   ?? 0.4;
+  const ratingSlope      = opts.ratingSlope      ?? 0.8;
+  const podiumBonusRatio = opts.podiumBonusRatio ?? 0.1;
+  const perfScale        = opts.perfScale        ?? 0.3;
+  const weight           = opts.weight           ?? 1;
 
   if (n === 0) return { perfs: [], deltas: [] };
   if (n === 1) return { perfs: [ratings[0]], deltas: [0] };
 
   const win = (ra, rb) => 1 / (1 + Math.pow(10, (rb - ra) / 400));
 
+  /* 离中心越远，K 越小（低分高分都变慢） */
   const kOf = r => {
     const t = Math.min(1, Math.abs(r - center) / spread);
     return baseK * (1 - (1 - minRatio) * t * t);
   };
-
+  /* 低分选手拿高名次奖励更多（追赶机制） */
   const bonusScaleOf = r => {
     const t = (r - center) / spread;
     return Math.max(0.3, Math.min(1.8, 1 - t * ratingSlope));
   };
-
-  // ★ 领奖台奖励系数
-  const podiumOf = rank => {
-    if (rank === 1) return 1.00;
-    if (rank === 2) return 0.45;
-    if (rank === 3) return 0.15;
-    return 0;
-  };
+  /* 领奖台奖励：1/2/3 名额外加成 */
+  const podiumOf = rk => (rk === 1 ? 1 : rk === 2 ? 0.45 : rk === 3 ? 0.15 : 0);
 
   const actual = ranks.map(r => (n - r) / (n - 1));
 
+  const rMin = Math.min(...ratings), rMax = Math.max(...ratings);
+  const lo0 = rMin - 800, hi0 = rMax + 800;
+
+  /* Performance（表现分）：反解出"期望击败率 = 实际击败率"的那个等级分
+     · 对手集合全场统一（含自己）→ 同分同名次必然同 Performance
+     · 击败率做半场修正（1 → 1-1/(2n)，0 → 1/(2n)）→ 第一名不再全部卡在上限 */
+  const eps = 1 / (2 * n);
+  const perfs = actual.map(target => {
+    const t = Math.min(1 - eps, Math.max(eps, target));
+    let lo = lo0, hi = hi0;
+    for (let it = 0; it < 60; it++) {
+      const mid = (lo + hi) / 2;
+      let s = 0;
+      for (let j = 0; j < n; j++) s += win(mid, ratings[j]);
+      if (s / n < t) lo = mid;
+      else           hi = mid;
+    }
+    return (lo + hi) / 2;
+  });
+
+  /* 单场涨跌 = 三项相加
+       ① 表现分项（主项）：kOf × (perf − 当前 Rating) / 400 × perfScale
+          perf 高于自己 → 加分；低于自己 → 扣分。参照的就是**当前 Rating**。
+       ② Elo 期望项：kOf × (实际击败率 − 期望击败率)
+          负责样本量与场地强度（少场次的人不会因为一场高分就冲顶）。
+       ③ 名次奖金 + 领奖台奖励：拉开名次差距。
+     比赛权重在最外层乘（必须在零和之前，否则截断会打散零和）。 */
   const expected = ratings.map((ri, i) => {
     let s = 0;
     for (let j = 0; j < n; j++) if (j !== i) s += win(ri, ratings[j]);
     return s / (n - 1);
   });
+  const raw = ratings.map((r, i) => weight * (
+      kOf(r) * (perfs[i] - r) / 400 * perfScale
+    + kOf(r) * (actual[i] - expected[i])
+    + baseK * nameBonusRatio * bonusScaleOf(r) * (actual[i] - 0.5)
+    + baseK * podiumBonusRatio * podiumOf(ranks[i])
+  ));
 
-  let deltas = ratings.map((r, i) => {
-    const eloPart    = kOf(r) * (actual[i] - expected[i]);
-    const namePart   = baseK * nameBonusRatio * bonusScaleOf(r) * (actual[i] - 0.5);
-    const podiumPart = baseK * podiumBonusRatio * podiumOf(ranks[i]);
-    return eloPart + namePart + podiumPart;
-  });
-
-  const firstIdx = ranks.indexOf(1);
-  if (firstIdx >= 0 && deltas[firstIdx] < 0) deltas[firstIdx] = 0;
-
-  const mean = deltas.reduce((a, b) => a + b, 0) / n;
-  deltas = deltas.map(d => d - mean);
-
-  deltas = deltas.map(d => Math.max(-maxDelta, Math.min(maxDelta, d)));
-
-  const rMin = Math.min(...ratings);
-  const rMax = Math.max(...ratings);
-  const lo0 = rMin - 800, hi0 = rMax + 800;
-
-  const perfs = ratings.map((_, i) => {
-    const target = actual[i];
-    let lo = lo0, hi = hi0;
-    for (let it = 0; it < 60; it++) {
-      const mid = (lo + hi) / 2;
-      let s = 0;
-      for (let j = 0; j < n; j++) if (j !== i) s += win(mid, ratings[j]);
-      const avg = s / (n - 1);
-      if (avg < target) lo = mid;
-      else               hi = mid;
-    }
-    return (lo + hi) / 2;
-  });
-
+  // 单场变化上限固定为 maxDelta（不随权重放大）：权重只影响"朝这个方向走多远"，
+  // 不能取消单场上限，否则一场比赛就能把人的分推 1500（实测有人 3 场冲到 3348）。
+  const deltas = settleDeltas(raw, ranks, maxDelta);
   return { perfs, deltas };
+}
+
+/* ============================================================
+ *  单场涨跌收尾：零和 + 冠军豁免
+ *   ① 第一名不参与零和分摊：冠军拿多少就是多少
+ *      —— 以前一律减均值，会出现"rank 1 却 +0 分"（raw 51，人均扣减 64）。
+ *   ② 其余人承担补正，使本场总额回到 0（ZERO_SUM_TOL = 0 即严格零和；
+ *      想允许全场均值每场漂移 ±X，把这个值改成 X 即可）
+ *   ③ 限幅：单场不超过 ±maxDelta
+ *   ④ 并列第一名保底 0（强手打弱场、raw 为负时也不掉分）
+ * ============================================================ */
+const ZERO_SUM_TOL = 0;          // 0 = 严格零和；>0 = 允许全场均值每场漂移 ±该值
+
+function settleDeltas(raw, ranks, maxDelta, tol = ZERO_SUM_TOL) {
+  const n = raw.length;
+  if (!n) return [];
+  const clampV = x => Math.max(-maxDelta, Math.min(maxDelta, x));
+  const isTop = ranks.map(r => r === 1);
+  const restCount = isTop.filter(x => !x).length;
+
+  // ① 冠军原样保留；② 其余人分摊补正，使总额落在 ±n×tol
+  const S = raw.reduce((a, b) => a + b, 0);
+  const target = Math.max(-n * tol, Math.min(n * tol, S));
+  const adj = restCount > 0 ? (S - target) / restCount : 0;
+  let d = raw.map((x, i) => (isTop[i] ? x : x - adj)).map(clampV);
+
+  // ④ 并列第一名保底 0（缺口从其他人的正分里扣）
+  let deficit = 0;
+  for (let i = 0; i < n; i++) if (isTop[i] && d[i] < 0) { deficit += -d[i]; d[i] = 0; }
+  if (deficit > 0) {
+    const posSum = d.reduce((a, x) => a + (x > 0 ? x : 0), 0);
+    if (posSum > 0) {
+      const keep = Math.max(0, (posSum - deficit) / posSum);
+      d = d.map(x => (x > 0 ? x * keep : x));
+    }
+  }
+  return d.map(clampV);
 }
 
 function assignRanks(results) {
@@ -637,7 +1079,11 @@ function assignRanks(results) {
 
 function recalculateAll() {
   const S = state.settings;
+  normalizeHidden();
 
+  // 隐藏选手：整场剔除，也不保留任何历史等级分 —— 重置成"没打过比赛"的状态
+  // （不走"冻结在隐藏时的值"那条路：那等于把他以前算出来的等级分留在了身上）
+  // 取消隐藏后这里会从头全量重算，历史场次还在，等级分自然恢复。
   for (const u of state.users) {
     u.rating = u.initialRating;
     u.maxRating = u.initialRating;
@@ -654,8 +1100,21 @@ function recalculateAll() {
   );
 
   for (const c of contests) {
-    const results = c.results.filter(r => findUser(r.userId));
+    // 已隐藏的选手整场剔除：别人的名次 / Performance / 零和都按去掉他之后重算
+    const results = visibleResults(c);
     if (!results.length) continue;
+
+    // 作弊者：这一场总分钉成 -1（不管各题分填了什么），照常排队、照常算 Rating
+    // ★ 必须先把原始总分存进 cheatRawTotal，否则取消作弊时就还不回去了（数据丢失）
+    for (const r of results) {
+      if (isCheatRow(r)) {
+        if (typeof r.cheatRawTotal !== 'number') r.cheatRawTotal = r.total;
+        r.total = CHEAT_SCORE;
+      } else if (typeof r.cheatRawTotal === 'number') {
+        r.total = r.cheatRawTotal;      // 取消作弊：恢复被钉住之前的总分
+        delete r.cheatRawTotal;
+      }
+    }
 
     assignRanks(results);
 
@@ -666,21 +1125,21 @@ function recalculateAll() {
     const { perfs, deltas } = computeRatingChanges(ratings, ranks, {
       baseK:            S.baseK,
       maxDelta:         S.maxDelta,
-      center:           S.initialRating,
-      minRatio:         0.3,
-      spread:           1200,
+      center:           S.center,
+      spread:           S.kSpread,
+      minRatio:         S.kMinRatio,
       nameBonusRatio:   S.nameBonusRatio,
       ratingSlope:      S.ratingSlope,
-      podiumBonusRatio: S.podiumBonusRatio
+      podiumBonusRatio: S.podiumBonusRatio,
+      perfScale:        S.perfScale,
+      weight:           w
     });
 
     results.forEach((r, i) => {
       const u = findUser(r.userId);
       const before = u.rating;
 
-      let delta = deltas[i] * w;
-      delta = Math.max(-S.maxDelta, Math.min(S.maxDelta, delta));
-
+      let delta = deltas[i];                       // 权重已经在模型里乘过了
       let after = Math.round(before + delta);
       after = Math.max(S.minRating, Math.min(S.maxRating, after));
       delta = after - before;
@@ -696,6 +1155,7 @@ function recalculateAll() {
     });
   }
 
+  // 隐藏选手不再还原任何历史值：他们的 rating 就停在初始分、场次 0（等于"没有等级分"）
   saveState();
 }
 
@@ -707,6 +1167,26 @@ function decodeBytes(buffer) {
   try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch (e) {}
   try { return new TextDecoder('gbk').decode(bytes); } catch (e) {}
   return new TextDecoder('utf-8').decode(bytes);
+}
+
+/* ==== 题目列识别（Lemon / CCR 共用）====
+   表里没被 rank/name/school/total 认领的列，**不能一律当题目**：
+   · CCR 导出的 CSV 末尾常有多余的空列（形如 `,,`），表头空、数据也空
+   · 成绩表里还常有「罚时 / 提交次数 / AC 数 / 奖项」这类列
+   以前这些都会被当成题目，名字用列号兜底 → 凭空多出 P5 / P6 / P7。
+   这里只收「表头不是已知非题目字段、且整列确实有数据」的列。 */
+const NOT_PROBLEM_RE = /^(罚时|罚时\(?min\)?|用时|时间|耗时|提交|提交次数|尝试|尝试次数|次数|ac|ac数|通过|通过题数|解决|解题数|得分率|正确率|奖项|奖|获奖|备注|rank|排名|名次|总分|总成绩|总计|total|score|成绩|得分|学校|单位|班级|school|team|org|组织|姓名|名称|选手|用户|昵称|玩家|name|user|handle|账号|帐号|序号|no\.?|#)$/i;
+
+function pickProblemCols(headers, used, rowsText) {
+  const out = [];
+  for (let i = 0; i < headers.length; i++) {
+    if (used[i]) continue;
+    if (NOT_PROBLEM_RE.test(String(headers[i] ?? '').trim())) continue;
+    const hasData = rowsText.some(r => String(r[i] ?? '').trim() !== '');
+    if (!hasData) continue;                 // 整列空 → 导出时多出来的列，不是题目
+    out.push(i);
+  }
+  return out;
 }
 
 function parseLemonHTML(html, fileName) {
@@ -762,7 +1242,15 @@ function parseLemonHTML(html, fileName) {
   }
   if (col.name < 0) throw new Error('无法识别"选手姓名"列');
 
-  for (let i = 0; i < N; i++) if (!used[i]) col.problems.push(i);
+  // 只有"表头不是已知非题目字段、且整列有数据"的列才算题目
+  const lemonCellTexts = trs.slice(1).map(tr => {
+    const cells = [...tr.querySelectorAll('td,th')];
+    return Array.from({ length: N }, (_, i) => cells[i] ? cells[i].textContent.trim() : '');
+  });
+  col.problems = pickProblemCols(headers, used, lemonCellTexts);
+  if (col.total < 0 && col.problems.length === 0) {
+    throw new Error('没识别出任何题目列，也没有"总分"列 —— 表格列名可能不是常见写法');
+  }
 
   let rows = [];
   for (const tr of trs.slice(1)) {
@@ -796,7 +1284,7 @@ function parseLemonHTML(html, fileName) {
   return {
     source: 'lemon_html',
     contestName,
-    problems: col.problems.map(i => headers[i] || `P${i}`),
+    problems: col.problems.map((i, k) => String(headers[i] || "").trim() || `P${k + 1}`),
     rows
   };
 }
@@ -861,7 +1349,11 @@ function parseCCRCSV(text, fileName) {
   }
   if (col.name < 0) throw new Error('无法识别"选手姓名"列');
 
-  for (let i = 0; i < N; i++) if (!used[i]) col.problems.push(i);
+  // 只有"表头不是已知非题目字段、且整列有数据"的列才算题目
+  col.problems = pickProblemCols(headers, used, grid.slice(1));
+  if (col.total < 0 && col.problems.length === 0) {
+    throw new Error('没识别出任何题目列，也没有"总分"列 —— 这份 CSV 的列名可能不是常见写法');
+  }
 
   let rows = [];
   for (const line of grid.slice(1)) {
@@ -887,7 +1379,7 @@ function parseCCRCSV(text, fileName) {
   return {
     source: 'ccr_csv',
     contestName: fileName.replace(/\.(csv|txt)$/i, ''),
-    problems: col.problems.map(i => headers[i] || `P${i}`),
+    problems: col.problems.map((i, k) => String(headers[i] || "").trim() || `P${k + 1}`),
     rows
   };
 }
@@ -948,8 +1440,8 @@ function renderPreview() {
     <th class="num">#</th>
     <th>原始姓名</th>
     <th>学校</th>
-    ${pending.problems.map(p => `<th class="num">${esc(p)}</th>`).join('')}
     <th class="num">总分</th>
+    ${pending.problems.map(p => `<th class="num">${esc(p)}</th>`).join('')}
     <th>匹配选手</th>
   </tr>`;
 
@@ -964,8 +1456,8 @@ function renderPreview() {
       <td class="num">${i + 1}</td>
       <td><b>${esc(r.name)}</b></td>
       <td>${esc(r.school || '-')}</td>
-      ${r.scores.map(s => `<td class="num">${s}</td>`).join('')}
       <td class="num"><b>${r.total}</b></td>
+      ${r.scores.map(s => `<td class="num">${s}</td>`).join('')}
       <td><select class="sel-match" data-idx="${i}">${opts.join('')}</select></td>
     </tr>`;
   }).join('');
@@ -1076,6 +1568,7 @@ function resetImportUI() {
  *  4.5 统计与分析（只读，不参与 Rating 计算）
  * ============================================================ */
 const ROSTER_DAYS = 180;      // 现役口径：最后一场比赛起算 180 天内有参赛
+const posTag = ['最易', '次易', '次难', '最难'];   // 题位（按难度排序后）的标签
 
 /* 题位难度顺序：按「全场满分率」给每道题排序（高→低 = 易→难）
    满分率 = 该题得分 ≥ 90 的人数比例（＝"做出来了"的比例）。
@@ -1084,7 +1577,7 @@ const ROSTER_DAYS = 180;      // 现役口径：最后一场比赛起算 180 天
 let DIFF_CACHE = {};
 function diffOrderOf(c) {
   if (DIFF_CACHE[c.id]) return DIFF_CACHE[c.id];
-  const res = c.results || [];
+  const res = visibleResults(c);            // 已隐藏的选手不参与题目难度统计
   const ncol = res.reduce((m, r) => Math.max(m, (r.scores || []).length), 0);
   const cols = [];
   for (let j = 0; j < ncol; j++) {
@@ -1131,12 +1624,13 @@ function uncertaintyOf(u) {
   return Math.max(20, Math.round(320 / Math.sqrt(u.matches)));
 }
 
-/* 某选手的全部参赛记录（按时间升序） */
+/* 某选手的全部参赛记录（按时间升序；已隐藏的场次不算） */
 function userHistory(uid) {
   const out = [];
   for (const c of sortedContests()) {
-    const r = c.results.find(x => x.userId === uid);
-    if (r) out.push({ contest: c, result: r, n: c.results.length });
+    const vis = visibleResults(c);
+    const r = vis.find(x => x.userId === uid);
+    if (r) out.push({ contest: c, result: r, n: vis.length });
   }
   return out;
 }
@@ -1176,7 +1670,7 @@ function computeStats(uid, h) {
       if (sc[c0.col] > 0) posSol[k]++;
       if (sc[c0.col] >= 90) posFull[k]++;
     }
-    for (const r of x.contest.results) {
+    for (const r of visibleResults(x.contest)) {
       if (r.userId === uid) continue;
       if (x.result.rank < r.rank) { pairsW++; (h2h[r.userId] = h2h[r.userId] || { w: 0, l: 0, t: 0 }).w++; }
       else if (x.result.rank > r.rank) { pairsL++; (h2h[r.userId] = h2h[r.userId] || { w: 0, l: 0, t: 0 }).l++; }
@@ -1215,13 +1709,16 @@ function computeStats(uid, h) {
     posMyRate: [0, 1, 2, 3].map(j => posAtt[j] ? posFull[j] / posAtt[j] : null),
     posScoreRate: [0, 1, 2, 3].map(j => posAtt[j] ? posMyScore[j] / (100 * posAtt[j]) : null),
     posAtt,
+    beatList: beats,                                    // 每场击败率（成长类徽章用）
+    maxDeltaUp: deltas.length ? Math.max(...deltas) : 0,
+    maxDeltaDown: deltas.length ? Math.min(...deltas) : 0,
     h2h
   };
 }
 
-/* 某场比赛的强度指标 */
+/* 某场比赛的强度指标（已隐藏的选手不算） */
 function contestStats(c) {
-  const res = c.results || [];
+  const res = visibleResults(c);
   const ratings = res.map(r => r.ratingBefore).filter(v => typeof v === 'number');
   const perfs = res.map(r => r.performance).filter(v => v != null);
   const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
@@ -1240,12 +1737,17 @@ function analysisIndex() {
   const end = latestDate();
   const last = {}, hist = {}, stats = {}, cstats = {};
   const ordered = sortedContests();
-  for (const c of state.contests) cstats[c.id] = contestStats(c);
-  for (const u of state.users) {
+  const visibleByContest = {};
+  for (const c of state.contests) {
+    cstats[c.id] = contestStats(c);
+    visibleByContest[c.id] = visibleResults(c);
+  }
+  for (const u of visibleUsers()) {
     const h = [];
     for (const c of ordered) {
-      const r = c.results.find(x => x.userId === u.id);
-      if (r) h.push({ contest: c, result: r, n: c.results.length });
+      const vis = visibleByContest[c.id] || [];
+      const r = vis.find(x => x.userId === u.id);
+      if (r) h.push({ contest: c, result: r, n: vis.length });
     }
     hist[u.id] = h;
     stats[u.id] = computeStats(u.id, h);
@@ -1327,21 +1829,21 @@ function dataHealth() {
       else seen[nm] = u.id;
     }
   }
-  // 5) 场次与成绩条数不一致
+  // 5) 场次与成绩条数不一致（隐藏选手的场次是冻结值，不参与这项检查）
   const cnt = {};
   for (const c of state.contests) for (const r of c.results) cnt[r.userId] = (cnt[r.userId] || 0) + 1;
-  for (const u of state.users) {
+  for (const u of visibleUsers()) {
     if ((cnt[u.id] || 0) !== u.matches) issues.push(['场次不符', `${u.name}：记录的场次 ${u.matches}，实际成绩 ${cnt[u.id] || 0} 条 → 点一次「保存并重算」即可修正`]);
   }
   // 6) 单场权重异常
   for (const c of state.contests) {
     if (c.weight > 2) issues.push(['权重偏高', `「${c.name}」${c.date} 权重 ${c.weight}（单场变化会被放大，且容易全部撞到上限 ±${state.settings.maxDelta}）`]);
   }
-  // 7) 样本过少 / 长期停赛却仍在榜
+  // 7) 样本过少 / 长期停赛却仍在榜（隐藏选手不计）
   const end = latestDate();
-  const few = state.users.filter(u => u.matches > 0 && u.matches <= 2).map(u => `${u.name}(${u.matches}场)`);
+  const few = visibleUsers().filter(u => u.matches > 0 && u.matches <= 2).map(u => `${u.name}(${u.matches}场)`);
   if (few.length) issues.push(['样本过少', `${few.length} 人参赛 ≤2 场，分数基本不可信：` + few.join('、')]);
-  const stale = state.users.filter(u => {
+  const stale = visibleUsers().filter(u => {
     const last = lastPlayedDate(u.id);
     return last && daysBetween(last, end) > ROSTER_DAYS;
   }).map(u => `${u.name}(${daysBetween(lastPlayedDate(u.id), end)} 天)`);
@@ -1351,11 +1853,65 @@ function dataHealth() {
     if (!c.date) issues.push(['缺日期', `「${c.name}」没有日期，结算顺序不可预期`]);
     if (c.results.some(r => !isFinite(r.total))) issues.push(['总分异常', `「${c.name}」有非法总分`]);
   }
+  // 9) 空题目列（CCR 导出尾部的空列被当成题目，名字是 P5/P6/P7，数据全 0）
+  const phantom = findPhantomProblems();
+  if (phantom.length) {
+    const byC = {};
+    phantom.forEach(h => { byC[h.c.name] = byC[h.c.name] || []; byC[h.c.name].push(h.p); });
+    issues.push(['空题目列',
+      `${phantom.length} 个题目列其实是空的（数据全 0，多半是 CSV 末尾多余的空列）→ 用「🧹 清理空题目列」一键删掉：`
+      + Object.keys(byC).map(n => `「${n}」${byC[n].join('/')}`).join('、')]);
+  }
+  // 10) 隐藏选手（不是问题，只是提醒：他们的成绩没有参与任何计算）
+  const hid = state.users.filter(u => isHidden(u.id));
+  if (hid.length) {
+    issues.push(['隐藏选手',
+      `${hid.length} 位选手处于「隐藏（不计算）」状态，他从总榜和分析里消失、成绩不计入任何结算：`
+      + hid.map(u => u.name).join('、') + ' → 在下面的「🙈 隐藏选手（不参与计算）」里恢复']);
+  }
   return issues;
 }
 
-function showHealth() {
+/* 找出"表头是 P<数字>、且整列数据全 0"的题目列 —— CCR 导出空列的典型特征 */
+function findPhantomProblems() {
+  const out = [];
+  for (const c of state.contests) {
+    const vis = visibleResults(c);
+    (c.problems || []).forEach((p, i) => {
+      if (!/^P\d+$/i.test(String(p).trim())) return;
+      if (!vis.length) return;
+      const allZero = vis.every(r => {
+        const v = (r.scores || [])[i];
+        return v == null || Number(v) === 0;
+      });
+      if (allZero) out.push({ c, i, p: String(p).trim() });
+    });
+  }
+  return out;
+}
+
+/* 一键清理这些空列（删前存快照；被删的列全是 0，所以总分不受影响） */
+function cleanPhantomProblems() {
+  if (!canEdit()) return;
+  const hits = findPhantomProblems();
+  if (!hits.length) { toast('没有发现空题目列'); return; }
+  pushSnapshot();
+  const byC = {};
+  hits.forEach(h => { (byC[h.c.id] = byC[h.c.id] || []).push(h.i); });
+  let removed = 0;
+  for (const c of state.contests) {
+    const idxs = byC[c.id];
+    if (!idxs) continue;
+    idxs.sort((a, b) => b - a).forEach(i => {
+      c.problems.splice(i, 1);
+      c.results.forEach(r => { if (Array.isArray(r.scores)) r.scores.splice(i, 1); });
+      removed++;
+    });
+  }
+  recalculateAll();
+  renderAll();
   renderHealth();
+  toast(`已清理 ${removed} 个空题目列（可回滚）`, 3200);
 }
 
 /* ============================================================
@@ -1365,6 +1921,25 @@ let anSortKey = 'rating';
 let anRoster  = 'active';
 let anSearch  = '';
 let anUid     = null;
+let anTab     = 'player';     // 分析页子块：achieve 成就 / contest 比赛 / player 人物分析
+
+/* 切换分析页的三个子块 */
+function setAnalysisTab(name) {
+  anTab = name || 'player';
+  document.querySelectorAll('[data-an]').forEach(b =>
+    b.classList.toggle('primary', b.dataset.an === anTab));
+  document.querySelectorAll('.an-group').forEach(g =>
+    g.classList.toggle('active', g.id === 'anGroup-' + anTab));
+  const hint = $('anHint');
+  if (hint) {
+    hint.textContent = ({
+      achieve: '纪录墙 · 成就徽章',
+      contest: '赛后战报 · 题目难度表 · 数据体检',
+      player:  '选手数据总表 · 选手画像',
+      compare: '任意两人：指标 · 交手 · Rating 曲线'
+    })[anTab] || '';
+  }
+}
 
 function renderAnalysis() {
   if (!$('analysisTable')) return;
@@ -1372,7 +1947,7 @@ function renderAnalysis() {
   const el = $('analysisTable');
 
   const q = anSearch.trim().toLowerCase();
-  let users = state.users.filter(u => {
+  let users = visibleUsers().filter(u => {
     if (anRoster === 'active' && !isActiveUser(u)) return false;
     if (q && !(u.name.toLowerCase().includes(q) ||
                (u.aliases || []).some(a => a.toLowerCase().includes(q)))) return false;
@@ -1444,10 +2019,15 @@ function renderAnalysis() {
     </tbody>
   </table>`;
 
+  const totalVisible = visibleUsers().length;
+  const hiddenCount = state.users.length - totalVisible;
+  const scopeText = anRoster === 'active'
+    ? '现役口径：最后一场比赛起 ' + ROSTER_DAYS + ' 天内有参赛；全部 ' + totalVisible + ' 人'
+    : '全部 ' + totalVisible + ' 人';
   $('analysisNote').innerHTML =
-    `共 ${users.length} 人（${anRoster === 'active' ? `现役口径：最后一场比赛起 ${ROSTER_DAYS} 天内有参赛；全部 ${state.users.length} 人` : `全部 ${state.users.length} 人`}）　·　` +
-    `基准日期 ${esc(idx.end || '-')}　·　点名字加入下方画像。` +
-    `<br>「胜率」已折算人数：3 人场拿第 2 = 50%，41 人场拿第 2 = 97.5%；「平均 Perf」按当场对手强弱折算，是跨场次最可比的水平指标；「±」按场次粗估，场次越少越不可信。`;
+    '共 ' + users.length + ' 人（' + scopeText + (hiddenCount ? '，另有 ' + hiddenCount + ' 人被隐藏不参与计算' : '') + '）　·　' +
+    '基准日期 ' + esc(idx.end || '-') + '　·　点名字加入下方画像。' +
+    '<br>「胜率」已折算人数：3 人场拿第 2 = 50%，41 人场拿第 2 = 97.5%；「平均 Perf」按当场对手强弱折算，是跨场次最可比的水平指标；「±」按场次粗估，场次越少越不可信。';
 
   el.querySelectorAll('.an-name').forEach(a => {
     a.addEventListener('click', () => {
@@ -1461,15 +2041,15 @@ function renderAnalysis() {
   // 下拉框
   const sel = $('anPlayer');
   const cur = anUid != null ? String(anUid) : sel.value;
-  sel.innerHTML = [...state.users]
+  sel.innerHTML = [...visibleUsers()]
     .sort((a, b) => a.name.localeCompare(b.name, 'zh'))
     .map(u => `<option value="${u.id}">${esc(u.name)}（${u.rating} 分 · ${u.matches} 场）</option>`)
     .join('');
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
   if (!anUid && sel.value) anUid = parseInt(sel.value, 10);
 
-  // 顶部统计
-  const active = state.users.filter(isActiveUser);
+  // 顶部统计（已隐藏的选手不算）
+  const active = visibleUsers().filter(isActiveUser);
   const rated = active.filter(u => u.matches > 0);
   const rates = rated.map(u => idx.stats[u.id].beatRate).filter(v => v != null);
   const best = rated.slice().sort((a, b) => (idx.stats[b.id].beatRate || 0) - (idx.stats[a.id].beatRate || 0))[0];
@@ -1482,6 +2062,13 @@ function renderAnalysis() {
 
   renderProfile();
   renderHealth();
+  renderReport();
+  renderRecords();
+  renderBadges();
+  renderProblems();
+  renderCompare();
+  renderGlobalCurve();
+  setAnalysisTab(anTab);          // 同步四个子块的按钮状态
 }
 
 function renderProfile() {
@@ -1506,6 +2093,325 @@ function renderHealth() {
 }
 
 /* ============================================================
+ *  4.7 创意功能：赛后战报 / 成就徽章 / 纪录墙 / 题目难度表 / 选手对比
+ * ============================================================ */
+
+/* ---------- 赛后战报 ---------- */
+function contestReport(cid) {
+  const idx = analysisIndex();
+  const list = sortedContests();
+  const c = state.contests.find(x => x.id === cid) || list[list.length - 1];
+  if (!c) return '还没有比赛数据。';
+  const res = visibleResults(c);
+  if (!res.length) return '这场比赛没有有效记录。';
+  const nm = id => (findUser(id) || {}).name || '?';
+  const sorted = [...res].sort((a, b) => a.rank - b.rank);
+  const byDelta = [...res].sort((a, b) => (b.delta ?? 0) - (a.delta ?? 0));
+  const up = byDelta[0], down = byDelta[byDelta.length - 1];
+  const medal = ['🥇', '🥈', '🥉'];
+  const L = [];
+  const unratedCount = (c.results || []).filter(r => findUser(r.userId) && isHidden(r.userId)).length;
+  L.push('【sxyz OI 模拟赛 · 战报】');
+  L.push(`${c.date}　${c.name}　${res.length + unratedCount} 人参赛${unratedCount ? `（${unratedCount} 人 unrated）` : ''}　${(c.problems || []).length} 题`);
+  L.push('');
+  sorted.slice(0, 3).forEach((r, i) => {
+    L.push(`${medal[i]} 第 ${i + 1} 名　${nm(r.userId)}　${r.total} 分　`
+      + `Rating ${r.ratingBefore} → ${r.ratingAfter}（${(r.delta ?? 0) >= 0 ? '+' : ''}${r.delta ?? 0}）`);
+  });
+  if (sorted.length > 3) {
+    L.push(`　 　第 4-6 名　` + sorted.slice(3, 6).map(r => `${nm(r.userId)}(${r.total})`).join('　'));
+  }
+  L.push('');
+  if (up && (up.delta ?? 0) > 0) L.push(`📈 最大升幅　${nm(up.userId)}　${up.delta >= 0 ? '+' : ''}${up.delta}（${up.ratingBefore} → ${up.ratingAfter}）`);
+  if (down && (down.delta ?? 0) < 0) L.push(`📉 最大跌幅　${nm(down.userId)}　${down.delta}（${down.ratingBefore} → ${down.ratingAfter}）`);
+
+  const diff = (diffOrderOf(c).cols || []).filter(x => x.att > 0);
+  if (diff.length) {
+    const ez = diff[0], hd = diff[diff.length - 1];
+    L.push(`😌 最易题　${c.problems[ez.col]}（全场均分 ${ez.avgRate * 100 | 0}）`);
+    L.push(`🎯 最难题　${c.problems[hd.col]}（全场均分 ${hd.avgRate * 100 | 0}，满分率 ${(hd.fullRate * 100).toFixed(0)}%）`);
+  }
+
+  // 破纪录
+  const recs = [];
+  for (const r of sorted) {
+    const u = findUser(r.userId);
+    const others = (idx.hist[r.userId] || []).filter(x => x.contest.id !== c.id);
+    if (r.performance != null && others.length) {
+      const prev = Math.max(...others.map(x => x.result.performance ?? -1e9));
+      if (r.performance > prev + 1e-6) recs.push(`${u.name} 打出个人最高 Performance ${Math.round(r.performance)}`);
+    }
+    if ((r.delta ?? 0) > 0 && r.ratingAfter >= u.maxRating) recs.push(`${u.name} 刷新个人最高 Rating ${r.ratingAfter}`);
+  }
+  if (recs.length) { L.push(''); L.push('🏅 本场纪录'); recs.slice(0, 6).forEach(t => L.push('　· ' + t)); }
+
+  const sum = res.reduce((a, r) => a + (r.delta ?? 0), 0);
+  const avgTotal = Math.round(res.reduce((a, r) => a + r.total, 0) / res.length);
+  L.push('');
+  L.push(`📊 全场平均 ${avgTotal} 分　最高 ${sorted[0].total} 分　`
+    + `Rating 净变化 ${sum >= 0 ? '+' : ''}${sum}（零和）`);
+  L.push(`🔗 完整榜单：sxyz-elo-rating.pages.dev`);
+  return L.join('\n');
+}
+
+/* ---------- 成就徽章 ---------- */
+function growthOf(s) {
+  if (!s || !s.matches) return null;
+  const seg = s.beatList || [];
+  if (seg.length < 6) return null;
+  const k = Math.min(10, Math.floor(seg.length / 2));
+  const head = seg.slice(0, k), tail = seg.slice(-k);
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+  return avg(tail) - avg(head);
+}
+const BADGE_DEFS = [
+  { icon: '🎯', name: 'AK 达人',  desc: '至少一场比赛每题都 ≥90 分', test: s => s.akCount >= 1 },
+  { icon: '🏹', name: 'AK 猎手',  desc: '累计 5 次 AK',            test: s => s.akCount >= 5 },
+  { icon: '🥉', name: '登台',     desc: '进过前三',                test: s => s.podium >= 1 },
+  { icon: '👑', name: '冠军',     desc: '拿过第一名',              test: s => s.wins >= 1 },
+  { icon: '🔱', name: '常胜将军', desc: '夺冠 5 次以上',           test: s => s.wins >= 5 },
+  { icon: '🏛', name: '前三常客', desc: '进前三 20 次以上',        test: s => s.podium >= 20 },
+  { icon: '💪', name: '六成胜率', desc: '平均击败率 ≥ 60%',        test: s => s.beatRate >= 0.6 },
+  { icon: '🔥', name: '八成胜率', desc: '平均击败率 ≥ 80%',        test: s => s.beatRate >= 0.8 },
+  { icon: '🧗', name: '硬骨头',   desc: '最难题有分率 ≥ 60%',      test: s => s.posRate[3] != null && s.posRate[3] >= 0.6 },
+  { icon: '⭐', name: '高光时刻', desc: '单场 Performance ≥ 2700（约全场前 1%）', test: s => s.bestPerf != null && s.bestPerf >= 2700 },
+  { icon: '🚀', name: '飞速进步', desc: '后半程击败率比前半程高 15% 以上', test: (s, g) => g != null && g >= 0.15 },
+  { icon: '🎖', name: '老兵',     desc: '参赛 30 场以上',          test: s => s.matches >= 30 },
+  { icon: '🛡', name: '铁人',     desc: '参赛 70 场以上',          test: s => s.matches >= 70 },
+  { icon: '📉', name: '逆风翻盘', desc: '有过单场 +150 以上的暴涨', test: s => s.maxDeltaUp >= 150 },
+];
+function badgesOf(uid) {
+  const s = analysisIndex().stats[uid];
+  if (!s || !s.matches) return [];
+  const g = growthOf(s);
+  return BADGE_DEFS.filter(b => { try { return !!b.test(s, g); } catch (e) { return false; } });
+}
+
+/* ---------- 纪录墙 ---------- */
+function recordWall() {
+  const idx = analysisIndex();
+  const all = visibleUsers().filter(u => u.matches > 0);
+  const out = [];
+  const best = (label, icon, fn) => {
+    let win = null;
+    for (const u of all) {
+      let v; try { v = fn(u, idx.stats[u.id] || {}); } catch (e) { v = null; }
+      if (!v || v.val == null) continue;
+      if (!win || v.val > win.val) win = { u, val: v.val, text: v.text };
+    }
+    if (win) out.push({ label, icon, u: win.u, text: win.text });
+  };
+  best('历史最高 Rating', '🏔', u => ({ val: u.maxRating, text: u.maxRating + ' 分' }));
+  best('单场最高 Performance', '⭐', (u, s) => s.bestPerf == null ? null : ({ val: s.bestPerf, text: Math.round(s.bestPerf) }));
+  best('单场最高总分', '💯', (u, s) => s.bestTotal == null ? null : ({ val: s.bestTotal, text: s.bestTotal + ' 分' }));
+  best('AK 次数', '🎯', (u, s) => s.akCount ? { val: s.akCount, text: s.akCount + ' 次' } : null);
+  best('夺冠次数', '👑', (u, s) => s.wins ? { val: s.wins, text: s.wins + ' 次' } : null);
+  best('进前三次数', '🥉', (u, s) => s.podium ? { val: s.podium, text: s.podium + ' 次' } : null);
+  best('最大单场升幅', '🚀', (u, s) => s.maxDeltaUp ? { val: s.maxDeltaUp, text: '+' + s.maxDeltaUp } : null);
+  best('参赛场次', '🎖', u => ({ val: u.matches, text: u.matches + ' 场' }));
+  // 最长冠军连胜
+  let streakWin = null;
+  for (const u of all) {
+    const h = idx.hist[u.id] || [];
+    let cur = 0, mx = 0;
+    for (const x of h) { if (x.result.rank === 1) { cur++; mx = Math.max(mx, cur); } else cur = 0; }
+    if (mx > 0 && (!streakWin || mx > streakWin.val)) streakWin = { u, val: mx, text: mx + ' 连冠' };
+  }
+  if (streakWin) out.push({ label: '最长冠军连胜', icon: '🔥', u: streakWin.u, text: streakWin.text });
+  return out;
+}
+
+/* ---------- 题目难度：逐场逐题，不跨场合并 ----------
+   为什么不做"按题名汇总"：同名未必同题（tree/number 这类通用名在不同比赛里
+   是完全不同的题），同一题也可能改名；而且难度本身就是当场属性，跟当场
+   参赛者水平有关，跨场平均会把不同水平的池子混在一起 —— 结论不可信。
+   所以这里每条记录 = 某一场里的某一道题。 */
+function problemInstances() {
+  const out = [];
+  for (const c of sortedContests()) {
+    const d = diffOrderOf(c);
+    (c.problems || []).forEach((name, j) => {
+      const col = (d.cols || []).find(x => x.col === j);
+      if (!col || !col.att) return;
+      out.push({
+        date: c.date, contest: c.name, cid: c.id, name: String(name),
+        rate: col.avgRate, full: col.fullRate, pass: col.passRate, n: col.att
+      });
+    });
+  }
+  return out;
+}
+
+/* 双人对比：只看交战胜率
+   胜 = 两人同场时 A 的名次比 B 好；负 = 比 B 差；平 = 名次相同。
+   只统计两人都参加的比赛。 */
+function compareHtml(aId, bId) {
+  if (!aId || !bId) return '<div class="empty">选两位选手开始对比</div>';
+  if (aId === bId) return '<div class="empty">选了同一个人 🙂</div>';
+  const idx = analysisIndex();
+  const ua = findUser(aId), ub = findUser(bId);
+  if (!ua || !ub) return '<div class="empty">找不到选手</div>';
+  const sa = idx.stats[aId] || {}, sb = idx.stats[bId] || {};
+
+  let h = (sa.h2h || {})[bId];
+  if (!h && (sb.h2h || {})[aId]) {          // 反向兜底
+    const r = sb.h2h[aId];
+    h = { w: r.l, l: r.w, t: r.t };
+  }
+  h = h || { w: 0, l: 0, t: 0 };
+  const total = h.w + h.l + h.t;
+  const decided = h.w + h.l;
+  const rate = decided ? h.w / decided : null;
+
+  if (!total) {
+    return `<div class="empty" style="padding:22px 0">
+      ${esc(ua.name)} 和 ${esc(ub.name)} 还<b>没有同场过</b>，暂时没有交手记录。
+    </div>`;
+  }
+
+  const pw = 100 * h.w / total, pl = 100 * h.l / total, pt = 100 - pw - pl;
+  const judge = rate == null ? '互有胜负但都是平局'
+    : rate > 0.6 ? `${esc(ua.name)} 明显占优`
+    : rate < 0.4 ? `${esc(ub.name)} 明显占优`
+    : '两人势均力敌';
+
+  return `
+    <div style="display:flex;align-items:center;justify-content:center;gap:clamp(14px,6vw,56px);
+                flex-wrap:wrap;padding:6px 0 2px">
+      <div style="text-align:center;min-width:110px">
+        <div style="font-size:19px;font-weight:800;color:var(--primary);line-height:1.3">${nameHtml(ua.name, ua.rating)}</div>
+        <div class="muted" style="font-size:12px">Rating ${ua.rating}　·　${ua.matches} 场</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:clamp(28px,7vw,40px);font-weight:800;letter-spacing:2px;line-height:1.15">
+          <span class="pos">${h.w}</span><span class="muted" style="margin:0 8px">:</span><span class="neg">${h.l}</span>
+        </div>
+        <div class="muted" style="font-size:12px">同场 ${total} 次${h.t ? `　平 ${h.t} 次` : ''}</div>
+      </div>
+      <div style="text-align:center;min-width:110px">
+        <div style="font-size:19px;font-weight:800;color:#f59e0b;line-height:1.3">${nameHtml(ub.name, ub.rating)}</div>
+        <div class="muted" style="font-size:12px">Rating ${ub.rating}　·　${ub.matches} 场</div>
+      </div>
+    </div>
+
+    <div style="display:flex;height:16px;border-radius:8px;overflow:hidden;margin:16px auto 8px;
+                max-width:540px;border:1px solid var(--border)">
+      <div style="width:${pw.toFixed(2)}%;background:var(--green)" title="${esc(ua.name)} 领先 ${h.w} 次"></div>
+      <div style="width:${pt.toFixed(2)}%;background:#9ca3af" title="名次相同 ${h.t} 次"></div>
+      <div style="width:${pl.toFixed(2)}%;background:var(--red)" title="${esc(ub.name)} 领先 ${h.l} 次"></div>
+    </div>
+
+    <div style="text-align:center">
+      <span class="badge gold" style="font-size:14px;padding:6px 16px">
+        交手胜率 ${rate == null ? '-' : pct(rate)}
+      </span>
+      <div class="muted" style="font-size:12px;margin-top:8px">
+        ${judge}　·　胜率 = 领先次数 ÷（领先 + 落后），平局不计入
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- 渲染 ---------- */
+function renderReport() {
+  const sel = $('reportContest'), box = $('reportBox');
+  if (!sel || !box) return;
+  const list = sortedContests().slice().reverse();
+  const keep = sel.value;
+  sel.innerHTML = list.map(c => `<option value="${c.id}">${esc(c.date)}　${esc(c.name)}（${c.results.length} 人）</option>`).join('');
+  if (keep && [...sel.options].some(o => o.value === keep)) sel.value = keep;
+  box.textContent = contestReport(parseInt(sel.value, 10));
+}
+function renderRecords() {
+  const box = $('recordBox');
+  if (!box) return;
+  const rows = recordWall();
+  box.innerHTML = rows.length ? rows.map(r => `<div class="rec-row">
+      <span class="ico">${r.icon}</span>
+      <span class="lbl">${r.label}</span>
+      <b style="cursor:pointer" data-uid="${r.u.id}" class="rec-name">${nameHtml(r.u.name, r.u.rating)}</b>
+      <span class="muted">${esc(r.text)}</span>
+    </div>`).join('') : '<div class="empty">还没有数据</div>';
+  box.querySelectorAll('.rec-name').forEach(a => a.addEventListener('click', () => {
+    anUid = parseInt(a.dataset.uid, 10); $('anPlayer').value = String(anUid);
+    renderProfile(); $('analysisProfile').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+}
+function renderBadges() {
+  const box = $('badgeBox');
+  if (!box) return;
+  const rows = visibleUsers().filter(u => u.matches > 0)
+    .map(u => ({ u, b: badgesOf(u.id) }))
+    .sort((a, b) => b.b.length - a.b.length || b.u.rating - a.u.rating);
+  box.innerHTML = `<div class="table-wrap" style="max-height:none"><table class="tbl"><tbody>
+    ${rows.map(({ u, b }) => `<tr>
+      <td style="width:150px"><b style="cursor:pointer" data-uid="${u.id}" class="bd-name">${nameHtml(u.name, u.rating)}</b></td>
+      <td>${b.length ? b.map(x => `<span class="badge" title="${esc(x.desc)}">${x.icon} ${esc(x.name)}</span>`).join('') : '<span class="muted">暂无徽章</span>'}</td>
+    </tr>`).join('')}
+  </tbody></table></div>`;
+  box.querySelectorAll('.bd-name').forEach(a => a.addEventListener('click', () => {
+    anUid = parseInt(a.dataset.uid, 10); $('anPlayer').value = String(anUid);
+    renderProfile(); $('analysisProfile').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+}
+function renderProblems() {
+  const box = $('probBox');
+  if (!box) return;
+  const mode = ($('probSort') || {}).value || 'hard';
+  const rows = problemInstances();
+  if (mode === 'hard') rows.sort((a, b) => a.rate - b.rate || (a.date < b.date ? 1 : -1));
+  else if (mode === 'easy') rows.sort((a, b) => b.rate - a.rate || (a.date < b.date ? 1 : -1));
+  else rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const total = rows.length;
+  const show = rows.slice(0, 60);
+  box.innerHTML = show.length ? `<table class="tbl">
+    <thead><tr>
+      <th class="num">#</th><th>日期</th><th>比赛</th><th>题名</th>
+      <th class="num" title="该题全场平均分（满分 100 制）">平均分</th>
+      <th class="num" title="该题全场拿到 ≥90 分的人数比例">满分率</th>
+      <th class="num" title="该题全场得分 > 0 的人数比例">有分率</th>
+      <th class="num">人数</th>
+    </tr></thead>
+    <tbody>${show.map((r, i) => `<tr>
+      <td class="num">${i + 1}</td>
+      <td class="muted">${esc(r.date)}</td>
+      <td><b style="cursor:pointer" data-goto-contest="${r.cid}" title="点一下看这场比赛的完整榜单">${esc(r.contest)}</b></td>
+      <td><b>${esc(r.name)}</b></td>
+      <td class="num">${(100 * r.rate).toFixed(0)}</td>
+      <td class="num">${pct(r.full)}</td>
+      <td class="num">${pct(r.pass)}</td>
+      <td class="num muted">${r.n}</td>
+    </tr>`).join('')}</tbody></table>
+    <p class="muted" style="margin:8px 0 0">共 <b>${total}</b> 条「某场某题」记录，显示前 ${show.length} 条。点比赛名可跳到那场的完整榜单。</p>`
+    : '<div class="empty">还没有带题目成绩的比赛</div>';
+}
+/* 交换对比的左右两人 */
+function swapCompare() {
+  const a = $('cmpA'), b = $('cmpB');
+  if (!a || !b) return;
+  const t = a.value;
+  a.value = b.value;
+  b.value = t;
+  renderCompare();
+}
+
+function renderCompare() {
+  const box = $('cmpBox'), sa = $('cmpA'), sb = $('cmpB');
+  if (!box || !sa || !sb) return;
+  const ranked = visibleUsers().slice().sort((a, b) => b.rating - a.rating);
+  const opts = ranked.map(u => `<option value="${u.id}">${esc(u.name)}（${u.rating}）</option>`).join('');
+  const ids = visibleUsers().map(u => String(u.id));
+  const keepA = String(sa.value || '');
+  const keepB = String(sb.value || '');
+  sa.innerHTML = opts;
+  sb.innerHTML = opts;
+  sa.value = ids.indexOf(keepA) >= 0 ? keepA : (ids[0] || '');
+  sb.value = (ids.indexOf(keepB) >= 0 && keepB !== sa.value) ? keepB
+           : (ids.filter(x => x !== sa.value)[0] || '');
+  box.innerHTML = compareHtml(parseInt(sa.value, 10), parseInt(sb.value, 10));
+}
+
+/* ============================================================
  *  5. 渲染
  * ============================================================ */
 function renderAll() {
@@ -1516,6 +2422,7 @@ function renderAll() {
   renderPlayers();
   renderStats();
   renderSnapInfo();
+  renderHidden();
   renderAnalysis();
 }
 
@@ -1532,8 +2439,12 @@ function renderContests() {
     <div class="contest-item">
       <div class="ci-head">
         <div>
-          <div class="ci-name">${esc(c.name)}</div>
-          <div class="ci-meta">📅 ${esc(c.date)} · ${c.results.length} 人 · 权重 ${c.weight} · ${c.source === 'lemon_html' ? 'Lemon' : 'CCR'}</div>
+          <div class="ci-name" style="cursor:pointer" data-goto-contest="${c.id}"
+               title="点一下看这场比赛的完整榜单">${esc(c.name)}</div>
+          <div class="ci-meta">📅 ${esc(c.date)} · ${c.results.length} 人${(() => {
+            const un = (c.results || []).filter(r => findUser(r.userId) && isHidden(r.userId)).length;
+            return un ? `（${un} unrated）` : '';
+          })()} · 权重 ${c.weight} · ${c.source === 'lemon_html' ? 'Lemon' : 'CCR'}</div>
         </div>
         <div class="ci-actions">
           <button class="btn small primary" data-act="view" data-id="${c.id}">查看榜单</button>
@@ -1565,16 +2476,46 @@ function deleteContest(id) {
   toast('已删除并重算');
 }
 
+/* 比赛榜单的统一取数：全员一起排（含 unrated），名次按总分配并列。
+   showContest（页面弹窗）和导出的分享页都走这里，保证两边完全一致。 */
+function contestBoard(c) {
+  const visibleRows = [...visibleResults(c)].sort((a, b) => a.rank - b.rank);
+  const hiddenRows = (c.results || [])
+    .filter(r => findUser(r.userId) && isHidden(r.userId));
+  const rows = [...visibleRows, ...hiddenRows].sort((a, b) => {
+    const byTotal = (b.total || 0) - (a.total || 0);
+    if (byTotal) return byTotal;
+    return (isHidden(a.userId) ? 1 : 0) - (isHidden(b.userId) ? 1 : 0);   // 同分时 unrated 排在后面
+  });
+
+  // 榜单名次：全员一起排（同分并列），口径与正式 rank 相同
+  const shownRank = new Map();
+  {
+    let rk = 0, prev = null;
+    rows.forEach((r, i) => {
+      const t = r.total || 0;
+      if (prev === null || t < prev) { rk = i + 1; prev = t; }
+      shownRank.set(r, rk);
+    });
+  }
+  return { rows, hiddenRows, shownRank };
+}
+
 function showContest(id) {
   const c = state.contests.find(x => x.id === id);
   if (!c) return;
 
-  const results = [...c.results].sort((a, b) => a.rank - b.rank);
+  // 隐藏选手照常进榜单、照常占名次、不作淡化，只是不参与 Rating 结算
+  const { rows, hiddenRows, shownRank } = contestBoard(c);
+  const cheatCount = rows.filter(isCheatRow).length;
 
   const html = `
     <div class="toolbar">
-      <span class="muted">📅 ${esc(c.date)} · 权重 ${c.weight} · 共 ${results.length} 人</span>
+      <span class="muted">📅 ${esc(c.date)} · 权重 ${c.weight} · 共 ${rows.length} 人参赛${
+        cheatCount ? ` · ${cheatCount} 人作弊（总分 ${CHEAT_SCORE}）` : ''}${
+        hiddenRows.length ? ` · ${hiddenRows.length} 人 unrated（不参与 Rating）` : ''}</span>
       <div class="spacer"></div>
+      <button class="btn small" id="exportContestBtn" title="导出成一个可以发给别人的独立 HTML 文件">📤 导出分享</button>
       <button class="btn small primary" id="editContestBtn">✏️ 勘误编辑</button>
       <button class="btn small" id="redateBtn">📅 改日期</button>
       <button class="btn small danger" id="delContestBtn">🗑 删除</button>
@@ -1584,24 +2525,46 @@ function showContest(id) {
         <thead><tr>
           <th class="num">#</th>
           <th>选手</th>
-          ${c.problems.map(p => `<th class="num">${esc(p)}</th>`).join('')}
           <th class="num">总分</th>
+          ${c.problems.map(p => `<th class="num">${esc(p)}</th>`).join('')}
           <th class="num">Performance</th>
           <th>Rating 变化</th>
         </tr></thead>
         <tbody>
-          ${results.map(r => {
+          ${rows.map(r => {
             const u = findUser(r.userId);
+            const unrated = isHidden(r.userId);
+            const cheated = isCheatRow(r);
+            // 每题满分 100，按分数段上色（0-29 红 / 30-49 橙 / 50-79 黄 / 80-100 绿）
+            const scoreCells = (r.scores || []).map(s =>
+              `<td class="num" style="color:${scoreColor(s)}">${s}</td>`).join('');
+            const nameCell = `<td><b style="cursor:pointer" data-goto-player="${r.userId}" title="点一下看 TA 的画像">${nameHtml(u ? u.name : r.rawName, unrated ? null : (r.ratingAfter ?? u?.rating ?? 0))}</b>${
+              cheated ? ` <span class="cheat-tag" title="作弊：本场总分 -1">🔨 作弊</span>` : ''}</td>`;
+            const rankCell = `<td class="num">${shownRank.get(r)}</td>`;
+            // 作弊场：总分用棕色 -1（不管各题分填了什么）
+            const totalCell = cheated
+              ? `<td class="num"><b class="cheat-score" title="作弊：本场总分 -1">${CHEAT_SCORE}</b></td>`
+              : `<td class="num"><b>${r.total}</b></td>`;
+            if (unrated) {
+              return `<tr>
+                ${rankCell}
+                ${nameCell}
+                ${totalCell}
+                ${scoreCells}
+                <td class="num muted">unrated</td>
+                <td class="muted">unrated</td>
+              </tr>`;
+            }
             const d = r.delta ?? 0;
             const cls = d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero';
             const dStr = d > 0 ? '+' + d : String(d);
             const rAfter = r.ratingAfter ?? u?.rating ?? 0;
             const rBefore = r.ratingBefore ?? u?.rating ?? 0;
-            return `<tr>
-              <td class="num">${r.rank}</td>
-              <td><b>${nameHtml(u ? u.name : r.rawName, rAfter)}</b></td>
-              ${(r.scores || []).map(s => `<td class="num">${s}</td>`).join('')}
-              <td class="num"><b>${r.total}</b></td>
+            return `<tr${cheated ? ' class="cheat-row"' : ''}>
+              ${rankCell}
+              ${nameCell}
+              ${totalCell}
+              ${scoreCells}
               <td class="num">${r.performance != null ? colorBar(r.performance, Math.round(r.performance)) : '-'}</td>
               <td>
                 ${rBefore}
@@ -1616,6 +2579,7 @@ function showContest(id) {
 
   openModal(c.name, html);
 
+  $('exportContestBtn').onclick = () => exportContestHtml(id);
   $('editContestBtn').onclick = () => editContest(id);
   $('redateBtn').onclick = () => {
     if (!canEdit()) return;
@@ -1631,15 +2595,377 @@ function showContest(id) {
   $('delContestBtn').onclick = () => { closeModal(); deleteContest(id); };
 }
 
+/* 等级分档位索引（0 灰 → 6 红）。分享页用 class 上色，这样深色模式能换一套更亮的色，
+   不受内联 style 影响。 */
+function ratingTier(r) {
+  if (r == null) return -1;
+  if (r < 1200) return 0;
+  if (r < 1400) return 1;
+  if (r < 1600) return 2;
+  if (r < 1900) return 3;
+  if (r < 2100) return 4;
+  if (r < 2400) return 5;
+  return 6;
+}
+
+/* ============================================================
+ *  导出：把某一场比赛的榜单做成一个独立可分享的 HTML 文件
+ *    · 单文件、零外部依赖（CSS/JS 全内联），双击就能看，传给别人也能看
+ *    · 表格可点表头排序、可按名字搜索，带深色模式
+ *    · 隐藏选手照常出现，标 unrated
+ * ============================================================ */
+function contestShareData(c) {
+  const { rows, hiddenRows, shownRank } = contestBoard(c);
+  return {
+    contest: {
+      name: c.name,
+      date: c.date,
+      weight: c.weight == null ? 1 : c.weight,
+      problems: (c.problems || []).map(p => String(p)),
+      count: rows.length,
+      unrated: hiddenRows.length,
+      cheated: rows.filter(isCheatRow).length,
+      avgTotal: rows.length ? Math.round(rows.reduce((a, r) => a + (r.total || 0), 0) / rows.length) : 0,
+      top: rows.length ? Math.max(...rows.map(r => r.total || 0)) : 0,
+      generatedAt: new Date().toLocaleString('zh-CN', { hour12: false })
+    },
+    rows: rows.map(r => {
+      const u = findUser(r.userId);
+      const unrated = isHidden(r.userId);
+      const cheated = isCheatRow(r);
+      const nm = u ? u.name : String(r.rawName || '');
+      const rating = unrated ? null : (r.ratingAfter ?? (u ? u.rating : null));
+      return {
+        rank: shownRank.get(r),
+        name: nm,
+        legend: rating != null && rating >= LEGEND_THRESHOLD,
+        tier: ratingTier(rating),
+        total: r.total,
+        cheated,
+        scores: (r.scores || []).map(s => Number(s) || 0),
+        scoreColors: (r.scores || []).map(s => scoreColor(s)),
+        perf: r.performance == null ? null : Math.round(r.performance),
+        perfTier: ratingTier(r.performance == null ? null : Math.round(r.performance)),
+        before: r.ratingBefore ?? null,
+        after: r.ratingAfter ?? null,
+        afterTier: ratingTier(r.ratingAfter ?? null),
+        delta: r.delta ?? null,
+        unrated
+      };
+    })
+  };
+}
+
+/* 生成整份 HTML 文本（纯字符串，不依赖当前页面 DOM） */
+function contestShareHtml(c) {
+  const data = contestShareData(c);
+  // 防止选手名里的 script 结束标签把嵌入的 JSON 提前截断（这里绝不能出现字面的结束标签）
+  const json = JSON.stringify(data).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  const title = `${data.contest.date} ${data.contest.name} · 成绩榜单`;
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(data.contest.date)} ${esc(data.contest.name)} 成绩榜单">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${data.contest.count} 人参赛 · ${data.contest.problems.length} 题 · 最高 ${data.contest.top} 分">
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--text:#1f2937;--muted:#6b7280;--border:#e5e7eb;--primary:#2563eb;--green:#16a34a;--red:#dc2626}
+[data-theme="dark"]{--bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--muted:#94a3b8;--border:#334155;--primary:#3b82f6;--green:#4ade80;--red:#f87171}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 18px 48px}
+.head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+h1{font-size:19px;margin:0;font-weight:700}
+.sub{color:var(--muted);font-size:13px;margin:4px 0 0}
+.spacer{flex:1}
+.btn{padding:7px 13px;border:1px solid var(--border);background:var(--card);color:var(--text);
+  border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:16px 0}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px}
+.stat .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .k{font-size:12px;color:var(--muted);margin-top:1px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0 10px}
+input[type=text]{padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;
+  font-family:inherit;background:var(--card);color:var(--text);outline:none;width:170px}
+input[type=text]:focus{border-color:var(--primary)}
+.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--card)}
+table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--border)}
+th{background:var(--card);font-weight:600;font-size:12px;color:var(--muted);position:sticky;top:0;
+  text-transform:uppercase;letter-spacing:.3px;cursor:pointer;user-select:none;z-index:1}
+th:hover{color:var(--primary)}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(37,99,235,.05)}
+.pos{color:var(--green);font-weight:600}
+.neg{color:var(--red);font-weight:600}
+.zero{color:var(--muted)}
+.unrated{color:var(--muted)}
+/* 作弊（击杀）：总分 -1，棕色 */
+.cheat-score{color:#8b4513;font-weight:700}
+[data-theme="dark"] .cheat-score{color:#d2a679}
+.cheat-tag{font-size:11px;color:#8b4513;background:#fdf0e3;border:1px solid #e0c3a3;
+  border-radius:5px;padding:0 5px;margin-left:4px;white-space:nowrap}
+[data-theme="dark"] .cheat-tag{color:#e8c39e;background:#3a2a1a;border-color:#6b4a2f}
+tr.cheat-row{background:rgba(139,69,19,.05)}
+.rating-cell{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;width:100%}
+.rating-bar{display:inline-block;width:3px;height:14px;border-radius:2px;vertical-align:middle}
+.legend-name{font-weight:800;letter-spacing:.3px;text-shadow:0 0 1px rgba(220,0,0,.45)}
+.legend-name .l1{color:#000}
+.legend-name .l2{color:#e11}
+/* 等级分档位：浅色一套、深色一套（深底上蓝/紫必须提亮，否则看不清） */
+.t0{color:#808080} .t1{color:#008000} .t2{color:#03a89e}
+.t3{color:#0000ff} .t4{color:#aa00aa} .t5{color:#ff8c00} .t6{color:#ff0000}
+[data-theme="dark"] .t0{color:#9ca3af} [data-theme="dark"] .t1{color:#4ade80}
+[data-theme="dark"] .t2{color:#2dd4bf} [data-theme="dark"] .t3{color:#60a5fa}
+[data-theme="dark"] .t4{color:#e879f9} [data-theme="dark"] .t5{color:#fb923c}
+[data-theme="dark"] .t6{color:#f87171}
+/* 竖条用 currentColor 取同一档的颜色，深浅色模式自动跟随 */
+.rating-bar.bar{background:currentColor}
+[data-theme="dark"] .legend-name .l1{color:#fff}
+.note{color:var(--muted);font-size:12px;margin-top:10px;line-height:1.7}
+.foot{color:var(--muted);font-size:12px;margin-top:22px;padding-top:12px;border-top:1px solid var(--border)}
+.foot a{color:var(--primary);text-decoration:none}
+.foot a:hover{text-decoration:underline}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+@media (max-width:620px){
+  .wrap{padding:14px 10px 32px}
+  h1{font-size:16px}
+  table{font-size:12px}
+  th,td{padding:7px 8px}
+  input[type=text]{width:120px}
+}
+@media print{
+  :root{--bg:#fff;--card:#fff}
+  .toolbar,.btn,.foot{display:none}
+  .table-wrap{border:none;max-height:none;overflow:visible}
+  th{position:static}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1 id="ttl"></h1>
+      <p class="sub" id="sub"></p>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="btnTheme" title="切换深色 / 浅色">🌙 深色</button>
+    <button class="btn" id="btnPrint" title="打印或另存为 PDF">🖨 打印 / PDF</button>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="toolbar">
+    <input type="text" id="q" placeholder="搜索选手…" autocomplete="off">
+    <span class="sub" id="hint" style="margin:0"></span>
+  </div>
+
+  <div class="table-wrap"><table id="tbl"></table></div>
+  <p class="note" id="note"></p>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+var DATA = ${json};
+var sortKey = 'rank', sortAsc = true;
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+  return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+
+function nameCell(r){
+  var n = esc(r.name);
+  if (r.legend) {
+    return '<span class="legend-name"><span class="l1">' + esc(r.name.charAt(0)) + '</span>'
+         + '<span class="l2">' + esc(r.name.slice(1)) + '</span></span>';
+  }
+  if (r.unrated || r.tier < 0) return '<span>' + n + '</span>';
+  return '<span class="t' + r.tier + '">' + n + '</span>';
+}
+
+function ratingCell(v, tier){
+  if (v == null || tier < 0) return '<span class="muted">-</span>';
+  return '<span class="rating-cell"><span class="rating-bar bar t' + tier + '"></span>'
+       + '<b class="t' + tier + '">' + v + '</b></span>';
+}
+
+function render(){
+  var c = DATA.contest;
+  document.getElementById('ttl').textContent = c.name + ' 成绩榜单';
+  document.getElementById('sub').textContent = c.date + ' · ' + c.count + ' 人参赛 · ' + c.problems.length + ' 题'
+    + (c.cheated ? ' · ' + c.cheated + ' 人作弊（总分 -1）' : '')
+    + (c.unrated ? ' · ' + c.unrated + ' 人 unrated（不计 Rating）' : '')
+    + (c.weight !== 1 ? ' · Rating 权重 ' + c.weight : '');
+
+  document.getElementById('stats').innerHTML =
+    '<div class="stat"><div class="v">' + c.count + '</div><div class="k">参赛人数</div></div>'
+  + '<div class="stat"><div class="v">' + c.problems.length + '</div><div class="k">题目数</div></div>'
+  + '<div class="stat"><div class="v">' + c.top + '</div><div class="k">最高总分</div></div>'
+  + '<div class="stat"><div class="v">' + c.avgTotal + '</div><div class="k">平均总分</div></div>';
+
+  var q = (document.getElementById('q').value || '').trim().toLowerCase();
+  var rows = DATA.rows.filter(function(r){ return !q || r.name.toLowerCase().indexOf(q) >= 0; });
+
+  rows.sort(function(a,b){
+    var k = sortKey, x, y;
+    if (k === 'name') { x = a.name; y = b.name; }
+    else if (k === 'total') { x = a.total||0; y = b.total||0; }
+    else { x = a.rank||0; y = b.rank||0; }
+    if (k === 'name') return sortAsc ? String(x).localeCompare(String(y),'zh') : String(y).localeCompare(String(x),'zh');
+    return sortAsc ? x - y : y - x;
+  });
+
+  var head = '<thead><tr>'
+    + '<th class="num" data-k="rank">#</th>'
+    + '<th data-k="name">选手</th>'
+    + '<th class="num" data-k="total">总分</th>';
+  c.problems.forEach(function(p, j){
+    head += '<th class="num" data-k="p' + j + '">' + esc(p) + '</th>';
+  });
+  head += '<th class="num">Performance</th><th>Rating 变化</th></tr></thead>';
+
+  var body = '<tbody>';
+  rows.forEach(function(r){
+    body += r.cheated ? '<tr class="cheat-row">' : '<tr>';
+    body += '<td class="num">' + r.rank + '</td>';
+    body += '<td><b>' + nameCell(r) + '</b>'
+          + (r.cheated ? ' <span class="cheat-tag" title="作弊：本场总分 -1">🔨 作弊</span>' : '')
+          + '</td>';
+    body += r.cheated
+      ? '<td class="num"><b class="cheat-score">' + r.total + '</b></td>'
+      : '<td class="num"><b>' + r.total + '</b></td>';
+    c.problems.forEach(function(p, j){
+      var s = r.scores[j];
+      if (s == null) body += '<td class="num muted">-</td>';
+      else body += '<td class="num" style="color:' + r.scoreColors[j] + '">' + s + '</td>';
+    });
+    if (r.unrated) {
+      body += '<td class="num unrated">unrated</td><td class="unrated">unrated</td>';
+    } else {
+      body += '<td class="num">' + ratingCell(r.perf, r.perfTier) + '</td>';
+      var d = r.delta || 0;
+      var cls = d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero';
+      var ds = d > 0 ? '+' + d : String(d);
+      // 赛后分单独画竖条 + 数字：不能套 .rating-cell（width:100%，同一格已有前置文字时会塌成 0）
+      var afterHtml = (r.after == null || r.afterTier < 0)
+        ? '<span class="muted">-</span>'
+        : '<span class="rating-bar bar t' + r.afterTier + '"></span> '
+          + '<b class="t' + r.afterTier + '">' + r.after + '</b>';
+      body += '<td>' + (r.before == null ? '-' : r.before)
+        + ' <span class="' + cls + '" style="margin:0 2px">' + ds + '</span> → '
+        + afterHtml + '</td>';
+    }
+    body += '</tr>';
+  });
+  body += '</tbody>';
+
+  document.getElementById('tbl').innerHTML = head + body;
+  if (!rows.length) {
+    document.getElementById('tbl').innerHTML = head + '<tbody><tr><td colspan="' + (c.problems.length + 5)
+      + '" class="empty">没有匹配的选手</td></tr></tbody>';
+  }
+  document.getElementById('hint').textContent = q ? ('匹配 ' + rows.length + ' 人') : ('共 ' + rows.length + ' 人');
+
+  const note = '题目按试卷列序展示；单元格颜色＝该题得分档位（<30 红 / 30-49 橙 / 50-79 黄 / ≥80 绿）。';
+  document.getElementById('note').innerHTML = note;
+
+  document.getElementById('foot').innerHTML =
+    '数据生成于 ' + esc(c.generatedAt) + '　·　'
+    + '<a href="https://sxyz-elo-rating.pages.dev" target="_blank" rel="noopener">sxyz-elo-rating.pages.dev</a>'
+    + '　·　这份文件是离线快照，不随榜单更新。';
+}
+
+document.getElementById('q').addEventListener('input', render);
+document.getElementById('btnPrint').addEventListener('click', function(){ window.print(); });
+document.getElementById('btnTheme').addEventListener('click', function(){
+  var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  this.textContent = dark ? '🌙 深色' : '☀️ 浅色';
+});
+document.getElementById('tbl').addEventListener('click', function(e){
+  var th = e.target.closest ? e.target.closest('th[data-k]') : null;
+  if (!th) return;
+  var k = th.getAttribute('data-k');
+  if (k === 'p0' || k === 'p1' || k === 'p2' || k === 'p3') k = 'total';   // 各题列按总分排（题目列不做二次排序）
+  if (sortKey === k) sortAsc = !sortAsc; else { sortKey = k; sortAsc = (k === 'name' || k === 'rank'); }
+  render();
+});
+
+render();
+<\/script>
+</body>
+</html>`;
+}
+
+/* 点「📤 导出分享」：下载一个独立 HTML */
+function exportContestHtml(id) {
+  const c = state.contests.find(x => x.id === id);
+  if (!c) return;
+  const html = contestShareHtml(c);
+  const safe = String(`${c.date}-${c.name}`).replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60);
+  try {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `sxyz-rating-${safe}.html`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('已导出：sxyz-rating-' + safe + '.html', 3200);
+  } catch (e) {
+    toast('导出失败：' + e.message);
+  }
+}
+
 function editContest(id) {
   if (!canEdit()) return;
   const c = state.contests.find(x => x.id === id);
   if (!c) return;
 
+  // 作弊行的总分已经被钉成 -1，勘误里要显示"被钉之前"的真实总分
+  const realTotal = r => (typeof r.cheatRawTotal === 'number' ? r.cheatRawTotal : r.total);
+
   const rows = [...c.results].sort((a, b) => a.rank - b.rank);
 
+  /* 这一场是按「各题分数」还是「只有总分」记的？
+     有些比赛（如 csp-s2025）导入时只有总分，problems 和 scores 都是空的。
+     以前不管有没有明细都去读 input.edit-score，没有明细时读到 0 个输入框，
+     总分就被重算成 0 —— 整场成绩会被清零。所以这里必须先判断模式。 */
+  const hasDetail = (c.problems || []).length > 0 && rows.some(r => (r.scores || []).length > 0);
+  const emptyRows = hasDetail ? rows.filter(r => !(r.scores || []).length).length : 0;
+
+  // 总分列（放在"选手"右边）：有题目明细时是只读的求和显示，没明细时是可输入的总分
+  const totalCell = r => hasDetail
+    ? `<td class="num total-cell"><b>${realTotal(r)}</b></td>`
+    : `<td class="num"><input type="number" class="edit-total" value="${realTotal(r) ?? 0}"
+                step="1" style="width:90px;text-align:right;padding:3px 6px"></td>`;
+  // 各题分数列：一律按 problems 的数量渲染，缺的补 0（防止旧数据 scores 比 problems 短）
+  const scoreCells = r => {
+    if (!hasDetail) return '';
+    return c.problems.map((_, j) => {
+      const v = (r.scores || [])[j];
+      return `<td class="num"><input type="number" class="edit-score" data-j="${j}"
+                value="${v == null ? 0 : v}" style="width:70px;text-align:right;padding:3px 6px"></td>`;
+    }).join('');
+  };
+
   const html = `
-    <p class="muted">直接修改各题分数后点"保存并重算"，系统会重新排名次、算 Performance 和 Rating。</p>
+    <p class="muted">直接修改${hasDetail ? '各题分数' : '总分'}后点"保存并重算"。勾上「🔨 作弊」则该选手本场总分固定为 -1。</p>
+    ${hasDetail ? '' : `<p class="muted" style="color:#b45309">
+      ⚠ 这场比赛<b>没有各题分数</b>（导入时只有总分），所以这里只能改<b>总分</b>。
+    </p>`}
+    ${emptyRows ? `<p class="muted" style="color:#b45309">
+      ⚠ 有 ${emptyRows} 位选手在这场比赛里没有题目明细，保存后会按各题分数重新计算总分（可能变成 0）。
+    </p>` : ''}
     <div class="toolbar">
       <label style="flex-direction:row;align-items:center;gap:6px">
         <span style="font-size:13px">日期</span>
@@ -1657,20 +2983,24 @@ function editContest(id) {
         <thead><tr>
           <th class="num">#</th>
           <th>选手</th>
-          ${c.problems.map(p => `<th class="num">${esc(p)}</th>`).join('')}
           <th class="num">总分</th>
+          ${hasDetail ? c.problems.map(p => `<th class="num">${esc(p)}</th>`).join('') : ''}
+          <th style="text-align:center" title="勾上＝判定这一场作弊：总分固定 -1，棕色显示，照常参与排名与 Rating 结算">🔨 作弊</th>
           <th>操作</th>
         </tr></thead>
         <tbody id="editTbody">
           ${rows.map((r, i) => {
             const u = findUser(r.userId);
-            return `<tr data-uid="${r.userId}" data-name="${esc(u ? u.name : r.rawName)}">
+            const cheated = isCheatRow(r);
+            return `<tr data-uid="${r.userId}" data-name="${esc(u ? u.name : r.rawName)}"${cheated ? ' data-cheated="1"' : ''}>
               <td class="num idx">${i+1}</td>
               <td><b>${nameHtml(u ? u.name : r.rawName, u ? u.rating : 0)}</b></td>
-              ${(r.scores || []).map((s, j) =>
-                `<td class="num"><input type="number" class="edit-score" data-j="${j}" value="${s}" style="width:70px;text-align:right;padding:3px 6px"></td>`
-              ).join('')}
-              <td class="num total-cell"><b>${r.total}</b></td>
+              ${totalCell(r)}
+              ${scoreCells(r)}
+              <td style="text-align:center">
+                <input type="checkbox" class="edit-cheat"${cheated ? ' checked' : ''}
+                  title="判定这一场作弊：总分固定 -1，照常参与排名与 Rating 结算">
+              </td>
               <td><button class="btn small danger" data-act="rm">移出</button></td>
             </tr>`;
           }).join('')}
@@ -1687,12 +3017,23 @@ function editContest(id) {
 
   const tbody = $('editTbody');
 
+  // 勾了「作弊」的行，总分列显示棕色的 -1；没勾的显示各题求和（没有明细时是输入框）
+  const refreshCheatCell = tr => {
+    if (!hasDetail) return;                       // 只有总分模式：不覆盖用户手填的总分
+    const cell = tr.querySelector('.total-cell');
+    if (!cell) return;
+    const cheated = tr.dataset.cheated === '1';
+    cell.innerHTML = cheated
+      ? `<b class="cheat-score" title="作弊：本场总分 -1">${CHEAT_SCORE}</b>`
+      : `<b>${[...tr.querySelectorAll('input.edit-score')]
+            .reduce((a, el) => a + (parseFloat(el.value) || 0), 0)}</b>`;
+  };
+
   const recalcTotals = () => {
+    if (!hasDetail) return;                       // 只有总分模式没有可累加的东西
     [...tbody.querySelectorAll('tr[data-uid]')].forEach((tr, idx) => {
       tr.querySelector('.idx').textContent = idx + 1;
-      const sum = [...tr.querySelectorAll('input.edit-score')]
-        .reduce((a, el) => a + (parseFloat(el.value) || 0), 0);
-      tr.querySelector('.total-cell').innerHTML = `<b>${sum}</b>`;
+      refreshCheatCell(tr);                       // 作弊行固定 -1，普通行按题目求和
     });
   };
 
@@ -1700,6 +3041,13 @@ function editContest(id) {
     tr.querySelectorAll('input.edit-score').forEach(inp =>
       inp.addEventListener('input', recalcTotals)
     );
+    // 勾「作弊」→ 总分列立刻显示成棕色的 -1；取消勾选 → 恢复按各题分数求和
+    const cheatBox = tr.querySelector('input.edit-cheat');
+    if (cheatBox) cheatBox.addEventListener('change', () => {
+      tr.dataset.cheated = cheatBox.checked ? '1' : '';
+      refreshCheatCell(tr);
+      recalcTotals();
+    });
     tr.querySelector('button[data-act="rm"]').onclick = () => {
       tr.remove(); recalcTotals();
     };
@@ -1721,10 +3069,15 @@ function editContest(id) {
     tr.innerHTML = `
       <td class="num idx"></td>
       <td><b>${nameHtml(u.name, u.rating)}</b></td>
-      ${c.problems.map((_, j) =>
-        `<td class="num"><input type="number" class="edit-score" data-j="${j}" value="0" style="width:70px;text-align:right;padding:3px 6px"></td>`
-      ).join('')}
-      <td class="num total-cell"><b>0</b></td>
+      ${hasDetail
+        ? '<td class="num total-cell"><b>0</b></td>'
+        : `<td class="num"><input type="number" class="edit-total" value="0" step="1" style="width:90px;text-align:right;padding:3px 6px"></td>`}
+      ${hasDetail
+        ? c.problems.map((_, j) => `<td class="num"><input type="number" class="edit-score" data-j="${j}" value="0" style="width:70px;text-align:right;padding:3px 6px"></td>`).join('')
+        : ''}
+      <td style="text-align:center">
+        <input type="checkbox" class="edit-cheat" title="判定这一场作弊：总分固定 -1，照常参与排名与 Rating 结算">
+      </td>
       <td><button class="btn small danger" data-act="rm">移出</button></td>`;
     tbody.appendChild(tr);
     bindRow(tr);
@@ -1746,16 +3099,31 @@ function editContest(id) {
       const uid = parseInt(tr.dataset.uid, 10);
       if (seen.has(uid)) return;
       seen.add(uid);
-      const scores = [...tr.querySelectorAll('input.edit-score')]
-        .map(el => parseFloat(el.value) || 0);
-      const total = scores.reduce((a, b) => a + b, 0);
       const old = c.results.find(x => x.userId === uid);
-      newResults.push({
+      const cheatBox = tr.querySelector('input.edit-cheat');
+      const cheated = !!(cheatBox && cheatBox.checked);
+      let scores, total;
+      if (hasDetail) {
+        scores = [...tr.querySelectorAll('input.edit-score')].map(el => parseFloat(el.value) || 0);
+        total = scores.reduce((a, b) => a + b, 0);
+      } else {
+        scores = [];                               // 这场本来就没有题目明细，保持空
+        const el = tr.querySelector('input.edit-total');
+        total = el ? (parseFloat(el.value) || 0) : (old ? realTotal(old) : 0);
+      }
+      const row = {
         userId: uid,
         rawName: old ? old.rawName : (tr.dataset.name || ''),
         rank: 0, total, scores,
         performance: null, ratingBefore: null, ratingAfter: null, delta: null
-      });
+      };
+      if (cheated) {
+        // 保留真实总分，重算时会钉成 -1；取消勾选后能精确还原
+        row.cheatRawTotal = total;
+        row.total = CHEAT_SCORE;
+        row.cheated = true;
+      }
+      newResults.push(row);
     });
 
     if (!newResults.length) {
@@ -1777,8 +3145,13 @@ function editContest(id) {
 
 function renderRating() {
   const el = $('ratingTable');
+  const visible = visibleUsers();
   if (!state.users.length) {
     el.innerHTML = '<div class="empty">暂无选手数据</div>';
+    return;
+  }
+  if (!visible.length) {
+    el.innerHTML = '<div class="empty">所有选手都被隐藏了（不参与计算）—— 到「设置 → 隐藏选手」里恢复</div>';
     return;
   }
 
@@ -1794,7 +3167,7 @@ function renderRating() {
     for (const r of c.results) lastDelta[r.userId] = r.delta;
   }
 
-  const users = [...state.users].sort((a, b) =>
+  const users = visible.sort((a, b) =>
     ratingMode === 'cur' ? b.rating - a.rating : b.maxRating - a.maxRating
   );
 
@@ -1944,18 +3317,32 @@ function showUser(uid) {
     a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id
   );
   for (const c of sortedContests) {
-    const r = c.results.find(r => r.userId === uid);
+    // 成绩照常展示（隐藏选手也能看到自己的场次），只是不给 Rating 相关的列
+    const r = (c.results || []).find(r => r.userId === uid && findUser(r.userId));
     if (r) history.push({ contest: c, result: r });
   }
 
+  const hiddenNote = isHidden(uid)
+    ? `<div class="toast-inline" style="margin-bottom:12px;padding:10px 12px;border:1px solid #fcd34d;
+         background:#fef3c7;color:#92400e;border-radius:8px;font-size:13px">
+         🙈 该选手已被临时隐藏：成绩不参与任何 Rating 结算，下面的记录只是历史存档，变化/赛后 Rating 不再更新。
+       </div>`
+    : '';
+
+  const hidUser = isHidden(uid);
   const html = `
+    ${hiddenNote}
     <div class="stat-row">
-      <div class="stat"><div class="v" style="color:${ratingColor(u.rating)}">${u.rating}</div><div class="k">当前 Rating</div></div>
-      <div class="stat"><div class="v" style="color:${ratingColor(u.maxRating)}">${u.maxRating}</div><div class="k">最高 Rating</div></div>
-      <div class="stat"><div class="v">${u.matches}</div><div class="k">参赛场次</div></div>
+      <div class="stat"><div class="v"${hidUser ? '' : ` style="color:${ratingColor(u.rating)}"`}>${hidUser ? '—' : u.rating}</div><div class="k">当前 Rating</div></div>
+      <div class="stat"><div class="v"${hidUser ? '' : ` style="color:${ratingColor(u.maxRating)}"`}>${hidUser ? '—' : u.maxRating}</div><div class="k">最高 Rating</div></div>
+      <div class="stat"><div class="v">${hidUser ? '—' : u.matches}</div><div class="k">参赛场次</div></div>
       <div class="stat"><div class="v">${u.initialRating}</div><div class="k">初始 Rating</div></div>
     </div>
     <div class="muted" style="margin-bottom:10px">别名：${esc((u.aliases || []).join(', ') || '无')}</div>
+    <div style="margin-bottom:12px">
+      <a href="javascript:void(0)" data-goto-player="${uid}"
+         style="color:var(--primary);font-weight:600;text-decoration:none">📊 查看完整画像（题位通过率 / 交手战绩 / 成就）→</a>
+    </div>
     ${renderRatingChart(history, u)}
     ${history.length ? `
     <div class="table-wrap">
@@ -1968,14 +3355,15 @@ function showUser(uid) {
           ${history.map(h => {
             const d = h.result.delta ?? 0;
             const rAfter = h.result.ratingAfter ?? 0;
+            const dash = '<span class="muted">—</span>';
             return `<tr>
-              <td>${esc(h.contest.name)}</td>
+              <td><b style="cursor:pointer" data-goto-contest="${h.contest.id}" title="点一下看这场比赛的完整榜单">${esc(h.contest.name)}</b></td>
               <td>${esc(h.contest.date)}</td>
-              <td class="num">${h.result.rank}</td>
+              <td class="num">${h.result.rank ?? '-'}</td>
               <td class="num">${h.result.total}</td>
-              <td class="num">${h.result.performance != null ? colorBar(h.result.performance, Math.round(h.result.performance)) : '-'}</td>
-              <td class="num ${d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero'}">${d > 0 ? '+' + d : d}</td>
-              <td class="num">${colorBar(rAfter, rAfter)}</td>
+              <td class="num">${hidUser ? dash : (h.result.performance != null ? colorBar(h.result.performance, Math.round(h.result.performance)) : '-')}</td>
+              <td class="num ${hidUser ? '' : d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero'}">${hidUser ? dash : (d > 0 ? '+' + d : d)}</td>
+              <td class="num">${hidUser ? dash : colorBar(rAfter, rAfter)}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -1990,18 +3378,19 @@ function showUser(uid) {
 function analysisProfileHtml(uid) {
   const u = findUser(uid);
   if (!u) return '<div class="empty">请选择选手</div>';
+  if (isHidden(uid)) {
+    return `<div class="empty" style="padding:26px 0;line-height:1.9">
+      🙈 <b>${esc(u.name)}</b> 目前处于「隐藏（不参与计算）」状态。<br>
+      他的成绩不计入任何一场结算，也不保留任何等级分（显示为 —）。<br>
+      需要管理员在「设置 → 🙈 隐藏选手」里取消隐藏后才会重新出现在总榜和分析里。
+    </div>`;
+  }
   const idx = analysisIndex();
   const history = idx.hist[uid] || [];
   const st = idx.stats[uid] || computeStats(uid, history);
   if (!st.matches) return `<div class="empty">${esc(u.name)} 还没有参赛记录</div>`;
 
-  const posLabel = ['P1', 'P2', 'P3', 'P4'];   // 仅用于旧引用，题位现已按通过率排序
-  const posTag = ['最易', '次易', '次难', '最难'];
-  const opp = Object.entries(st.h2h || {})
-    .map(([id, v]) => ({ id: parseInt(id, 10), ...v, total: v.w + v.l + v.t, me: findUser(parseInt(id, 10)) }))
-    .filter(x => x.me)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 12);
+  const posLabel = ['P1', 'P2', 'P3', 'P4'];   // 仅用于旧引用，题位现已按满分率排序
 
   return `
     <div class="stat-row">
@@ -2028,6 +3417,8 @@ function analysisProfileHtml(uid) {
       参赛区间：${esc(st.first)} ~ ${esc(st.last)}　·　
       近 5 场名次：${st.fresh.map(x => x.result.rank).join(' → ')}　·　
       别名：${esc((u.aliases || []).join(', ') || '无')}
+      　·　<a href="javascript:void(0)" data-cmp-with="${uid}"
+        style="color:var(--primary);font-weight:600;text-decoration:none">⚔️ 把 TA 放进选手对比</a>
     </div>
 
     <h2 style="font-size:14px;margin:14px 0 8px">各题位满分率（按当场全场「满分率」排序：P1=最容易，P4=最难）</h2>
@@ -2062,24 +3453,6 @@ function analysisProfileHtml(uid) {
       · 「与全场差」用的是各自打过的那些场次，横向可比；正数说明这档题你做出来得比同场人多。
     </p>
 
-    <h2 style="font-size:14px;margin:16px 0 8px">交手战绩（同场最多的 ${opp.length} 位对手）</h2>
-    ${opp.length ? `
-    <div class="table-wrap">
-      <table class="tbl" style="white-space:nowrap">
-        <thead><tr><th>对手</th><th class="num">同场</th><th class="num">领先</th><th class="num">落后</th><th class="num">持平</th><th class="num">胜率</th></tr></thead>
-        <tbody>
-          ${opp.map(o => `<tr>
-            <td><b>${nameHtml(o.me.name, o.me.rating)}</b></td>
-            <td class="num">${o.total}</td>
-            <td class="num pos">${o.w}</td>
-            <td class="num neg">${o.l}</td>
-            <td class="num muted">${o.t}</td>
-            <td class="num"><b>${o.w + o.l ? pct(o.w / (o.w + o.l)) : '-'}</b></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>` : '<div class="empty">还没有同场记录</div>'}
-
     <h2 style="font-size:14px;margin:16px 0 8px">Rating 曲线</h2>
     ${renderRatingChart(history, u)}
 
@@ -2098,7 +3471,7 @@ function analysisProfileHtml(uid) {
             const n = h.n || h.contest.results.length;
             const br = n > 1 ? (n - h.result.rank) / (n - 1) : 1;
             return `<tr>
-              <td>${esc(h.contest.name)}</td>
+              <td><b style="cursor:pointer" data-goto-contest="${h.contest.id}" title="点一下看这场比赛的完整榜单">${esc(h.contest.name)}</b></td>
               <td>${esc(h.contest.date)}</td>
               <td class="num">${n}</td>
               <td class="num">${h.result.rank}</td>
@@ -2125,20 +3498,26 @@ function renderPlayers() {
 
   el.innerHTML = `<table class="tbl">
     <thead><tr>
-      <th>ID</th><th>姓名</th><th class="num">Rating</th><th class="num">场次</th><th>别名</th><th>操作</th>
+      <th>ID</th><th>姓名</th><th class="num">Rating</th><th class="num">场次</th><th>状态</th><th>别名</th><th>操作</th>
     </tr></thead>
     <tbody>
-      ${users.map(u => `<tr>
+      ${users.map(u => {
+        const hid = isHidden(u.id);
+        return `<tr>
         <td class="muted">${u.id}</td>
-        <td><b>${nameHtml(u.name, u.rating)}</b></td>
-        <td class="num">${colorBar(u.rating, u.rating)}</td>
-        <td class="num">${u.matches}</td>
+        <td><b style="cursor:pointer" data-goto-player="${u.id}" title="点一下看 TA 的画像">${nameHtml(u.name, hid ? null : u.rating)}</b></td>
+        <td class="num">${hid ? '<span class="muted">—</span>' : colorBar(u.rating, u.rating)}</td>
+        <td class="num">${hid ? '<span class="muted">—</span>' : u.matches}</td>
+        <td>${hid
+          ? '<span class="muted" title="成绩不参与任何结算；去设置页恢复">🙈 已隐藏（不计算）</span>'
+          : '<span class="pos">参与计算</span>'}</td>
         <td class="muted">${esc((u.aliases || []).join(', ') || '-')}</td>
         <td>
           <button class="btn small" data-act="rename" data-id="${u.id}">改名</button>
           <button class="btn small danger" data-act="del" data-id="${u.id}">删除</button>
         </td>
-      </tr>`).join('')}
+      </tr>`;
+      }).join('')}
     </tbody>
   </table>`;
 
@@ -2269,18 +3648,19 @@ function mergeUsers(keepId, dropId) {
 function renderStats() {
   const el = $('statRow');
   if (!el) return;
-  const totalUsers = state.users.length;
+  const vis = visibleUsers();
+  const totalUsers = vis.length;
   const totalContests = state.contests.length;
   const avg = totalUsers
-    ? Math.round(state.users.reduce((s, u) => s + u.rating, 0) / totalUsers)
+    ? Math.round(vis.reduce((s, u) => s + u.rating, 0) / totalUsers)
     : 0;
-  const top = [...state.users].sort((a, b) => b.rating - a.rating)[0];
+  const top = [...vis].sort((a, b) => b.rating - a.rating)[0];
 
   el.innerHTML = `
     <div class="stat"><div class="v">${totalUsers}</div><div class="k">注册选手</div></div>
     <div class="stat"><div class="v">${totalContests}</div><div class="k">已录入比赛</div></div>
     <div class="stat"><div class="v">${avg}</div><div class="k">平均 Rating</div></div>
-    <div class="stat"><div class="v" style="color:${top ? ratingColor(top.rating) : '#000'}">${top ? esc(top.name) : '-'}</div><div class="k">当前第一</div></div>
+    <div class="stat"><div class="v">${top ? nameHtml(top.name, top.rating) : '-'}</div><div class="k">当前第一</div></div>
   `;
 }
 
@@ -2298,25 +3678,218 @@ function closeModal() { $('modal').style.display = 'none'; }
  *  7. Tab 切换
  * ============================================================ */
 function switchTab(name) {
+  if (!isAdmin && name === 'import') name = 'rating';   // 没登录看不到导入页
+  currentTab = name;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
   renderAll();
 }
 
 /* ============================================================
+ *  7.5 跳转：点人名 → 选手画像；点比赛名 → 比赛详情
+ *      任何元素只要带上 data-goto-player="id" 或 data-goto-contest="id"
+ *      就自动可跳，不用一个个绑定事件。
+ * ============================================================ */
+function gotoPlayer(uid) {
+  const u = findUser(uid);
+  if (!u) { toast('找不到这位选手'); return; }
+  anUid = uid;
+  anTab = 'player';                    // 画像在「人物分析」子块里
+  switchTab('analysis');
+  const sel = $('anPlayer');
+  if (sel) sel.value = String(uid);
+  setAnalysisTab('player');
+  renderProfile();
+  const el = $('analysisProfile');
+  if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function gotoContest(cid) {
+  const c = state.contests.find(x => x.id === cid);
+  if (!c) { toast('找不到这场比赛'); return; }
+  switchTab('contests');
+  showContest(cid);
+}
+/* 跳到分析页的某个子块（比赛 / 成就） */
+function gotoAnalysisTab(name) {
+  anTab = name;
+  switchTab('analysis');
+  setAnalysisTab(name);
+  const g = $('anGroup-' + name);
+  if (g && g.scrollIntoView) g.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (!t || typeof t.closest !== 'function') return;
+  const p = t.closest('[data-goto-player]');
+  if (p) {
+    e.preventDefault();
+    try { closeModal(); } catch (err) {}
+    gotoPlayer(parseInt(p.getAttribute('data-goto-player'), 10));
+    return;
+  }
+  const c = t.closest('[data-goto-contest]');
+  if (c) {
+    e.preventDefault();
+    try { closeModal(); } catch (err) {}
+    gotoContest(parseInt(c.getAttribute('data-goto-contest'), 10));
+    return;
+  }
+  const w = t.closest('[data-cmp-with]');
+  if (w) {
+    e.preventDefault();
+    const uid = parseInt(w.getAttribute('data-cmp-with'), 10);
+    try { closeModal(); } catch (err) {}
+    const a = $('cmpA');
+    if (a) a.value = String(uid);
+    gotoAnalysisTab('compare');
+    renderCompare();
+  }
+});
+
+/* ============================================================
+ *  7.6 全局等级分曲线：所有选手的 Rating 曲线叠在一起看趋势
+ * ============================================================ */
+function renderGlobalCurve() {
+  const box = $('curveBox'), sel = $('curveHighlight'), rangeEl = $('curveRange');
+  if (!box) return;
+  const idx = analysisIndex();
+  const all = sortedContests();
+  const range = rangeEl ? rangeEl.value : 'all';
+  const from = range === 'all' ? 0 : Math.max(0, all.length - parseInt(range, 10));
+  const shown = all.slice(from);
+  if (shown.length < 2) { box.innerHTML = '<div class="empty">比赛太少，画不出趋势</div>'; return; }
+
+  const dateIdx = new Map(shown.map((c, i) => [c.date, i]));
+  const players = visibleUsers().filter(u => u.matches > 0)
+    .map(u => ({
+      u,
+      pts: (idx.hist[u.id] || [])
+        .filter(x => dateIdx.has(x.contest.date))
+        .map(x => ({ i: dateIdx.get(x.contest.date), v: x.result.ratingAfter ?? 0 }))
+    }))
+    .filter(p => p.pts.length > 0);
+  if (!players.length) { box.innerHTML = '<div class="empty">这段时间没有比赛</div>'; return; }
+
+  const vals = players.flatMap(p => p.pts.map(x => x.v));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const pad = Math.max(20, (hi - lo) * 0.06);
+  lo -= pad; hi += pad;
+
+  const W = 900, H = 380, PL = 48, PR = 110, PT = 16, PB = 30;
+  const X = i => PL + (W - PL - PR) * (shown.length <= 1 ? 0 : i / (shown.length - 1));
+  const Y = v => (H - PB) - (H - PB - PT) * ((v - lo) / ((hi - lo) || 1));
+  const linePath = pts => pts.map((p, k) => `${k ? 'L' : 'M'}${X(p.i).toFixed(1)} ${Y(p.v).toFixed(1)}`).join(' ');
+
+  // 不做任何"自动加粗"：只有在下面下拉框里手动选中的那位才加粗
+  const hlId = sel && sel.value ? parseInt(sel.value, 10) : null;
+  const hl = hlId ? players.find(p => p.u.id === hlId) : null;
+
+  const grid = [0, .25, .5, .75, 1].map(t => {
+    const v = lo + (hi - lo) * t, y = Y(v);
+    return `<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W - PR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>
+            <text x="${PL - 6}" y="${(y + 4).toFixed(1)}" font-size="10" fill="var(--muted)" text-anchor="end">${Math.round(v)}</text>`;
+  }).join('');
+
+  const mass = players.filter(p => p.u.id !== hlId)
+    .map(p => `<path d="${linePath(p.pts)}" fill="none" stroke="${ratingColor(p.u.rating)}" stroke-width="1" opacity=".42"><title>${esc(p.u.name)} · ${p.u.rating}</title></path>`).join('');
+  const hlPath = hl ? `<path d="${linePath(hl.pts)}" fill="none" stroke="#ff2d2d" stroke-width="3"><title>${esc(hl.u.name)} · ${hl.u.rating}</title></path>` : '';
+  // 右端只标出被选中的那一位
+  const labels = hl ? (() => {
+    const last = hl.pts[hl.pts.length - 1];
+    return `<text x="${(X(last.i) + 6).toFixed(1)}" y="${(Y(last.v) + 4).toFixed(1)}" font-size="11" fill="#ff2d2d" font-weight="600">${esc(hl.u.name)}</text>`;
+  })() : '';
+
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;background:var(--card);border-radius:8px">
+      ${grid}${mass}${hlPath}${labels}
+      <text x="${PL}" y="${H - 8}" font-size="11" fill="var(--muted)">${esc(shown[0].date)}</text>
+      <text x="${W - PR}" y="${H - 8}" font-size="11" fill="var(--muted)" text-anchor="end">${esc(shown[shown.length - 1].date)}</text>
+    </svg>
+    <p class="muted" style="margin:8px 0 0">
+      ${shown.length} 场比赛 · ${players.length} 位选手 · 纵轴 ${Math.round(lo)} ~ ${Math.round(hi)}
+      ${hl ? `　·　高亮：<b>${esc(hl.u.name)}</b>` : '　·　在右上角选一位选手即可把他的曲线加粗'}
+    </p>`;
+
+  if (sel) {
+    // 下拉框始终列出"所有有成绩的选手"，这样切换区间时选择不会消失
+    const keep = sel.value;
+    const allPlayers = visibleUsers().filter(u => u.matches > 0).sort((a, b) => b.rating - a.rating);
+    sel.innerHTML = '<option value="">高亮：不选</option>' +
+      allPlayers.map(u => `<option value="${u.id}">${esc(u.name)}（${u.rating}）</option>`).join('');
+    if (keep && [...sel.querySelectorAll('option')].some(o => o.value === keep)) sel.value = keep;
+  }
+}
+
+/* ============================================================
  *  8. 设置页 UI
  * ============================================================ */
+/* 设置页现在只剩这些只读信息（Rating 参数已写死，界面不再提供输入框） */
 function loadSettingsUI() {
-  $('sInit').value         = state.settings.initialRating;
-  $('sBaseK').value        = state.settings.baseK ?? 200;
-  $('sMaxDelta').value     = state.settings.maxDelta;
-  $('sMin').value          = state.settings.minRating;
-  $('sMax').value          = state.settings.maxRating;
-  $('sNameBonus').value    = state.settings.nameBonusRatio ?? 0.5;
-  $('sRatingSlope').value  = state.settings.ratingSlope ?? 0.5;
-  $('sPodiumBonus').value  = state.settings.podiumBonusRatio ?? 0.6;
-  $('sLegend').value       = state.settings.legendThreshold ?? 3000;
   renderSnapInfo();
+  renderHidden();
+}
+
+/* ---------- 隐藏选手（暂时不参与计算） ---------- */
+function renderHidden() {
+  const box = $('hiddenBox');
+  if (!box) return;
+  if (!state.users.length) { box.innerHTML = '<div class="empty">还没有选手</div>'; return; }
+
+  const hidden = state.users.filter(u => isHidden(u.id));
+  const normal = state.users.filter(u => !isHidden(u.id)).sort((a, b) => b.rating - a.rating);
+  const cnt = $('hiddenCount');
+  if (cnt) cnt.textContent = `已隐藏 ${hidden.length} 人 · 参与计算 ${normal.length} 人`;
+
+  // 隐藏的排在最前（方便一眼看到、恢复），其余按 Rating 降序
+  const rows = [...hidden.sort((a, b) => a.name.localeCompare(b.name, 'zh')), ...normal];
+
+  box.innerHTML = `<table class="tbl">
+    <thead><tr>
+      <th>选手</th><th class="num">Rating</th><th class="num">场次</th>
+      <th>状态</th><th>操作</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(u => {
+        const hid = isHidden(u.id);
+        return `<tr>
+          <td><b>${nameHtml(u.name, hid ? null : u.rating)}</b></td>
+          <td class="num">${hid ? '<span class="muted">—</span>' : colorBar(u.rating, u.rating)}</td>
+          <td class="num">${hid ? '<span class="muted">—</span>' : u.matches}</td>
+          <td>${hid
+            ? '<span class="muted">🙈 已隐藏，不参与计算</span>'
+            : '<span class="pos">参与计算</span>'}</td>
+          <td>${isAdmin
+            ? `<button class="btn small ${hid ? '' : 'danger'}" data-hide="${u.id}" data-to="${hid ? 0 : 1}">
+                 ${hid ? '👁 取消隐藏' : '🙈 隐藏（不计算）'}
+               </button>`
+            : '<span class="muted" style="font-size:12px">需要管理员</span>'}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+
+  box.querySelectorAll('button[data-hide]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setUserHidden(parseInt(btn.dataset.hide, 10), btn.dataset.to === '1');
+    });
+  });
+}
+
+/* 隐藏 / 取消隐藏：存快照 → 改隐藏名单 → 全量重算（别人的分也会跟着变） */
+function setUserHidden(uid, hide) {
+  if (!canEdit()) { toast('请先登录管理员（设置 → 管理员）'); return; }
+  const u = findUser(uid);
+  if (!u) return;
+  const has = isHidden(uid);
+  if (hide === has) return;
+
+  pushSnapshot();
+  const list = Array.isArray(state.hiddenUsers) ? state.hiddenUsers.slice() : [];
+  state.hiddenUsers = hide ? [...list, uid] : list.filter(x => x !== uid);
+  recalculateAll();
+  renderAll();
+  toast(hide
+    ? `已隐藏「${u.name}」：成绩不参与计算，其他选手的 Rating 已重算`
+    : `已恢复「${u.name}」：成绩重新计入，Rating 已重算`, 3000);
 }
 
 /* ============================================================
@@ -2350,19 +3923,97 @@ function bindEvents() {
   });
   const btnHealth2 = $('btnHealth2');
   if (btnHealth2) btnHealth2.addEventListener('click', renderHealth);
+  const btnClean = $('btnCleanPhantom');
+  if (btnClean) btnClean.addEventListener('click', () => cleanPhantomProblems());
+
+  // 分析页三个子块
+  document.querySelectorAll('[data-an]').forEach(b =>
+    b.addEventListener('click', () => setAnalysisTab(b.dataset.an)));
+
+  // 赛后战报
+  const repSel = $('reportContest');
+  if (repSel) repSel.addEventListener('change', renderReport);
+  const repCopy = $('btnReportCopy');
+  if (repCopy) repCopy.addEventListener('click', async () => {
+    const txt = ($('reportBox') || {}).textContent || '';
+    try {
+      await navigator.clipboard.writeText(txt);
+      toast('战报已复制，直接粘到群里就行');
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast('战报已复制'); }
+      catch (e2) { toast('复制失败，手动选中文字复制吧'); }
+      ta.remove();
+    }
+  });
+
+  // 全局等级分曲线
+  ['curveHighlight', 'curveRange'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('change', renderGlobalCurve);
+  });
+
+  // 题库榜排序
+  const probSortEl = $('probSort');
+  if (probSortEl) probSortEl.addEventListener('change', renderProblems);
+
+  // 选手对比
+  ['cmpA', 'cmpB'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('change', renderCompare);
+  });
+  const btnSwap = $('btnCmpSwap');
+  if (btnSwap) btnSwap.addEventListener('click', swapCompare);
+
+  // 深色模式
+  const btnTheme = $('btnTheme');
+  if (btnTheme) btnTheme.addEventListener('click', () => {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    setTheme(dark ? 'light' : 'dark');
+  });
 
   const btnMerge = $('btnMergeUsers');
   if (btnMerge) btnMerge.addEventListener('click', showMergeDialog);
 
-  // 恢复公开快照前保留当前本机修改，取消操作不会覆盖数据。
-  $('btnCloudPull').addEventListener('click', async () => {
+  // 管理员登录 / 退出
+  const btnLogin = $('btnAdminLogin');
+  const passEl = $('adminPass');
+  const doLogin = () => {
+    if (adminLogin(passEl ? passEl.value : '')) {
+      if (passEl) passEl.value = '';
+      cloudPush(false);
+    } else {
+      toast('口令不正确', 2400);
+      if (passEl) { passEl.value = ''; passEl.focus(); }
+    }
+  };
+  if (btnLogin) btnLogin.addEventListener('click', doLogin);
+  if (passEl) passEl.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  const btnLogout = $('btnAdminLogout');
+  if (btnLogout) btnLogout.addEventListener('click', adminLogout);
+
+  // 云同步（写入需要管理员登录）
+  const btnPush = $('btnCloudPush');
+  if (btnPush) btnPush.addEventListener('click', async () => {
+    if (!isAdmin) { toast('请先在「设置 → 管理员」登录'); return; }
+    CLOUD.token = ADMIN_PASS;
+    await cloudPush(false);
+  });
+  const btnPull = $('btnCloudPull');
+  if (btnPull) btnPull.addEventListener('click', async () => {
     const remote = await cloudFetchData();
-    if (!remote) return;
-    const hasLocalEdits = CLOUD.dirty || localStorage.getItem(STORAGE_KEY + '-dirty') === '1';
-    if (hasLocalEdits && !confirm('重新载入公开数据将覆盖当前浏览器中的修改。继续？')) return;
-    pushSnapshot();
-    usePublishedData(remote);
-    toast('已重新载入公开数据');
+    if (!remote) { toast('读取云端失败（可能还没部署后端）'); renderCloudStatus(); return; }
+    if (CLOUD.dirty && !confirm('本机有未上传的改动，从云端刷新会覆盖它。继续？')) return;
+    adoptState(remote);
+    CLOUD.updatedAt = remote.updatedAt || 0;
+    CLOUD.dirty = false;
+    localStorage.removeItem(STORAGE_KEY + '-dirty');
+    recalculateAll();
+    renderAll();
+    loadSettingsUI();
+    renderCloudStatus();
+    toast('已从云端刷新');
   });
 
   const dz = $('dropzone');
@@ -2388,30 +4039,13 @@ function bindEvents() {
   $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-  $('btnSaveSettings').addEventListener('click', () => {
-    if (!canEdit()) return;
-    pushSnapshot();
-    state.settings.initialRating    = num($('sInit').value) || 1500;
-    state.settings.baseK            = num($('sBaseK').value) || 200;
-    state.settings.maxDelta         = num($('sMaxDelta').value) || 300;
-    state.settings.minRating        = num($('sMin').value) || 0;
-    state.settings.maxRating        = num($('sMax').value) || 4000;
-    state.settings.nameBonusRatio   = Math.max(0, Math.min(1, num($('sNameBonus').value) ?? 0.5));
-    state.settings.ratingSlope      = Math.max(-1, Math.min(1, num($('sRatingSlope').value) ?? 0.5));
-    state.settings.podiumBonusRatio = Math.max(0, Math.min(2, num($('sPodiumBonus').value) ?? 0.6));
-    state.settings.legendThreshold  = num($('sLegend').value) || 3000;
-    recalculateAll();
-    renderAll();
-    toast('已保存并重算全部 Rating');
-  });
-
   $('btnRollback').addEventListener('click', () => { if (canEdit()) rollback(); });
 
   $('btnExport').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `oi-rating-backup-${today()}.json`;
+    a.download = `sxyz-elo-rating-backup-${today()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   });
@@ -2429,10 +4063,7 @@ function bindEvents() {
         if (!confirm('导入将覆盖当前所有数据，确定继续？')) return;
         pushSnapshot();
         state = Object.assign(defaultState(), data);
-        if (state.settings.legendThreshold == null)  state.settings.legendThreshold = 3000;
-        if (state.settings.ratingSlope == null)      state.settings.ratingSlope = 0.5;
-        if (state.settings.podiumBonusRatio == null) state.settings.podiumBonusRatio = 0.6;
-        recalculateAll();
+                recalculateAll();
         renderAll();
         loadSettingsUI();
         toast('导入成功');
@@ -2458,12 +4089,25 @@ function bindEvents() {
 }
 
 (function init() {
+  restoreAdmin();       // 恢复上次的管理员登录状态（口令写死在 ADMIN_PASS）
+  if (localStorage.getItem(STORAGE_KEY + '-dirty') === '1') CLOUD.dirty = true;
+  // 主题：优先本机保存，其次跟随系统
+  try {
+    const saved = localStorage.getItem('oi-rating-theme');
+    if (saved === 'dark' || saved === 'light') setTheme(saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+  } catch (e) {}
   loadState();
   bindEvents();
   loadSettingsUI();
+  currentTab = isAdmin ? 'import' : 'rating';
+  renderAdminUI();      // 没登录时把「导入成绩」藏起来
   renderAll();
-  switchTab('rating');
-  cloudBoot();
+  cloudBoot();          // 异步：云端有更新的数据会自动换掉并重渲染
+  // PWA：注册 Service Worker（只在 https / localhost 下有效，本地文件打开会跳过）
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
 })();
 </script>
 </body>

@@ -1,0 +1,10 @@
+# The mirrored files are copied byte for byte from the deployment, so Git must
+# not rewrite their line endings. Without this, a Windows checkout would report
+# a change on every run even though the published bytes never changed.
+index.html -text
+sw.js -text
+manifest.webmanifest -text
+data.json -text
+api/data -text
+
+*.png binary

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "description": "Browse the standings, individual competitors and school OI contests. The initial backup contains 53 competitors and 108 contests."
+    "description": "Browse the standings, individual competitors and school OI contests, then review each competitor's win rate, ranks and rating history."
   },
   "pages": {
     "home": {
@@ -8,7 +8,7 @@
     },
     "features": {
       "title": "Features · {project}",
-      "description": "Browse the standings, individual competitors and school OI contests. The initial backup contains 53 competitors and 108 contests."
+      "description": "Browse the standings, individual competitors and school OI contests, then review each competitor's win rate, ranks and rating history."
     },
     "download": {
       "title": "Get started · {project}",
@@ -51,7 +51,7 @@
       "Follow school contest ratings across rounds"
     ],
     "description": [
-      "Browse the standings, individual competitors and school OI contests. The initial backup contains 53 competitors and 108 contests."
+      "Browse the standings, individual competitors and school OI contests, then review each competitor's win rate, ranks and rating history."
     ],
     "primary_action": "Open the standings",
     "secondary_action": "Explore features"
@@ -71,8 +71,8 @@
         "icon": "book"
       },
       {
-        "title": "Keep your edits",
-        "description": "After importing or adjusting results, export JSON from Settings to carry the data to another browser.",
+        "title": "Follow new contests",
+        "description": "When results change online, the scheduled sync copies the new contests and ratings into this repository and leaves a commit behind.",
         "icon": "link"
       }
     ]
@@ -87,8 +87,8 @@
         "icon": "layers"
       },
       {
-        "title": "Local changes",
-        "description": "Imported results stay in the current browser. Export a JSON backup or reload the published data from Settings.",
+        "title": "Automatic sync",
+        "description": "The deployed dataset is fetched once a day; the workflow opens a pull request and merges it only when something changed, with co-authorship on both commits.",
         "detail": "",
         "icon": "book"
       }
@@ -103,8 +103,8 @@
         "icon": "book"
       },
       {
-        "title": "Keep your edits",
-        "description": "After importing or adjusting results, export JSON from Settings to carry the data to another browser.",
+        "title": "Follow new contests",
+        "description": "When results change online, the scheduled sync copies the new contests and ratings into this repository and leaves a commit behind.",
         "icon": "link"
       }
     ]
