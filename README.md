@@ -2,15 +2,35 @@
 
 公开网站：<https://tangyixiao.github.io/oi-rating/>
 
-从指定内网应用归档并适配到 GitHub Pages，保留成绩导入、比赛管理、总榜、选手、数据分析、JSON 导出/导入和原有 Rating 算法。初始数据为 `oi-rating-backup-2026-10-14.json`：53 位选手、108 场比赛。
+排行榜应用部署在 <https://sxyz-elo-rating.pages.dev/>。本仓库保存同一份页面的副本和它发布的数据，并由定时工作流自动跟进线上改动，所以 GitHub Pages 也能打开完整的成绩榜、比赛记录、选手与数据分析。
 
 ## 数据如何保存
 
-页面首次打开会读取仓库中的 `data.json`。页面中的修改只保存在当前浏览器，不会修改其他人的榜单；重载页面会保留本机修改。设置页可以导出 JSON，或在确认后重新载入公开数据。
+线上应用把整份数据存在 Cloudflare：读取对所有人开放，写入需要管理口令。页面启动时读取相对路径 `api/data`，定时同步工作流把这个接口的响应原样写进仓库：
 
-要更新所有人看到的数据，在页面中完成修改，导出 JSON，用它替换仓库的 `data.json`，提交并推送。GitHub Pages 会重新发布。这里不提供云端共享写入或管理口令后端。
+- `api/data` —— 页面运行时读取的地址；
+- `data.json` —— 同一份数据的可读副本，供测试和人直接查看。
 
-仓库和网站公开，`data.json` 中的选手姓名与成绩也公开。
+两个文件始终是同一份字节。仓库和网站公开，其中的选手姓名与成绩也公开。
+
+历次同步都在 Git 里留下记录。`updatedAt` 与内容都没变时，工作流不会产生提交。
+
+## 同步工作流
+
+`.github/workflows/sync-live-site.yml` 每天 21:17（UTC）抓取线上页面与数据，也可以手动触发：
+
+```sh
+gh workflow run sync-live-site.yml            # 抓取、开 PR 并自动合并
+gh workflow run sync-live-site.yml -f merge=false   # 只开 PR，留给人看
+```
+
+`scripts/sync_live_site.py` 负责抓取。它只使用标准库，所以定时任务不安装任何依赖。脚本会先确认取回的内容仍是本应用（页面含标签页标记与数据接口路径），再校验数据的结构，任何一项不通过就放弃写入，不会用错误内容覆盖仓库。本地只用它对比差异、不写入：
+
+```sh
+python3 scripts/sync_live_site.py --check
+```
+
+工作流跑完把改动提交到 `sync/live-site` 分支，开一个 PR 并自行压缩合并；提交和合并提交都带 `Co-authored-by` 联署。它以自身令牌工作，不监听 `push` 与 `pull_request`，所以外部提交的内容碰不到写入权限。
 
 ## 本地运行
 
@@ -21,11 +41,11 @@ cd ~/oi-rating
 python3 -m http.server 8080 --bind 127.0.0.1
 ```
 
-打开 <http://127.0.0.1:8080/>。请通过 HTTP 服务打开，浏览器直接打开 HTML 文件时可能无法读取 JSON。
+打开 <http://127.0.0.1:8080/>。请通过 HTTP 服务打开，浏览器直接打开 HTML 文件时可能无法读取数据。
 
 ## 部署
 
-Pages 来源为 `main` 分支根目录。`.nojekyll` 让 GitHub 直接发布静态文件；数据使用相对 URL，可在仓库路径下正常载入。
+Pages 来源为 `main` 分支根目录。`.nojekyll` 让 GitHub 直接发布静态文件；页面里的路径都是相对的，所以在 `/oi-rating/` 这样的子路径下也能正常载入数据、清单与图标。
 
 ## 验证
 
@@ -38,11 +58,7 @@ python3 -m http.server 8080 --bind 127.0.0.1
 .venv/bin/python tests/smoke.py --url http://127.0.0.1:8080/
 ```
 
-测试检查备份中的 Rating、53 位选手及 108 场比赛、六个标签页、分析筛选、本机修改后重载、取消/确认恢复、慢网络下本机和其他标签页修改的保护、JSON 导出/导入、移动布局，以及没有脚本错误、网络写入和内网请求。可以用 `--browser-executable /path/to/chromium` 指定已有浏览器。
-
-## 本机原始归档
-
-本机 `archive/` 保存原始 HTML、数据接口响应、提供的 JSON、来源和 SHA-256 清单。原始归档、测试截图和 Python 虚拟环境不提交到公开仓库。抓取只读取站点入口及其直接引用的数据接口；没有源服务器代码。
+测试用页面自带的重算逻辑逐人核对 `data.json` 里的 Rating，确认总榜、比赛、选手、数据分析四个页面显示的行数与数据一致，匿名访客看不到「导入成绩」与导出按钮，分析页的搜索与隐藏人数提示正常，比赛榜单能打开，主题选择在重载后保持，Service Worker 能注册，移动端不横向溢出，并且没有脚本错误、对外请求，`api/data` 与 `data.json` 字节相同。可以用 `--browser-executable /path/to/chromium` 指定已有浏览器。
 
 ## 项目网站
 
