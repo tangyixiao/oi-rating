@@ -17,7 +17,7 @@
 
 ## 同步工作流
 
-`.github/workflows/sync-live-site.yml` 每天 21:17（UTC）抓取线上页面与数据，也可以手动触发：
+`.github/workflows/sync-live-site.yml` 每八小时抓取一次线上页面与数据（05:17、13:17、21:17 UTC，即北京时间 13:17、21:17、次日 05:17），也可以手动触发：
 
 ```sh
 gh workflow run sync-live-site.yml            # 抓取、开 PR 并自动合并

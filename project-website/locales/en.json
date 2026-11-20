@@ -88,7 +88,7 @@
       },
       {
         "title": "Automatic sync",
-        "description": "The deployed dataset is fetched once a day; the workflow opens a pull request and merges it only when something changed, with co-authorship on both commits.",
+        "description": "The deployed dataset is fetched every eight hours; the workflow opens a pull request and merges it only when something changed, with co-authorship on both commits.",
         "detail": "",
         "icon": "book"
       }

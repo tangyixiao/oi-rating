@@ -15,7 +15,10 @@ name: Mirror the deployed rating site
 
 on:
   schedule:
-    - cron: '17 21 * * *'
+    # Every eight hours: 05:17, 13:17 and 21:17 UTC, which is 13:17, 21:17 and
+    # 05:17 in UTC+8. Off the top of the hour on purpose, since scheduled runs
+    # queued at :00 are the ones most likely to be delayed.
+    - cron: '17 5,13,21 * * *'
   workflow_dispatch:
     inputs:
       merge:
