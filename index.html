@@ -1174,16 +1174,50 @@ function decodeBytes(buffer) {
    · CCR 导出的 CSV 末尾常有多余的空列（形如 `,,`），表头空、数据也空
    · 成绩表里还常有「罚时 / 提交次数 / AC 数 / 奖项」这类列
    以前这些都会被当成题目，名字用列号兜底 → 凭空多出 P5 / P6 / P7。
-   这里只收「表头不是已知非题目字段、且整列确实有数据」的列。 */
-const NOT_PROBLEM_RE = /^(罚时|罚时\(?min\)?|用时|时间|耗时|提交|提交次数|尝试|尝试次数|次数|ac|ac数|通过|通过题数|解决|解题数|得分率|正确率|奖项|奖|获奖|备注|rank|排名|名次|总分|总成绩|总计|total|score|成绩|得分|学校|单位|班级|school|team|org|组织|姓名|名称|选手|用户|昵称|玩家|name|user|handle|账号|帐号|序号|no\.?|#)$/i;
+   这里只收「表头不是已知非题目字段、整列确实有数据、且出现过纯数字」的列。
+
+   ★ 学校/队伍类表头（school / team / org / 学校 / 班级 …）**故意不列在这里**：
+   它们由 tryAssignSchool 按「内容是文字」认领，认领不了的就该当题目 ——
+   否则一道题恰好叫 team / school / org 时会被静默吞掉（2026-11-23 修，
+   3.7 那场一道题就叫 team，整列被当队伍列吞掉，只存了 sale/berry/wota）。 */
+const NOT_PROBLEM_RE = /^(罚时|罚时\(?min\)?|用时|时间|耗时|提交|提交次数|尝试|尝试次数|次数|ac|ac数|通过|通过题数|解决|解题数|得分率|正确率|奖项|奖|获奖|备注|rank|排名|名次|总分|总成绩|总计|total|score|成绩|得分|姓名|名称|选手|用户|昵称|玩家|name|user|handle|账号|帐号|序号|no\.?|#)$/i;
+
+/* 单元格是不是一个分数（纯数字） */
+const isNumericCell = v => /^-?\d+(\.\d+)?$/.test(String(v ?? '').trim());
+
+/* 这一列是不是"文字列"（队名 / 学校 / 奖项这类）：有数据且一个数字都没有。
+   用来防止「题目恰好叫 school / org / team」时被学校列吃掉。 */
+function isTextColumn(rowsText, i) {
+  const vals = rowsText.map(r => String(r[i] ?? '').trim()).filter(v => v !== '');
+  if (!vals.length) return false;
+  return !vals.some(isNumericCell);
+}
+
+/* 学校/队伍列：表头对得上 **且** 内容是文字。
+   ★ 只按表头匹配会被撞名坑死（2026-11-23：一道题就叫 team，整列被当队伍吞掉）。 */
+const SCHOOL_HEAD_RE = /^(学校|单位|班级|队伍|战队|团体|school|team|org|group|组织)$/i;
+
+function tryAssignSchool(headers, used, rowsText, col) {
+  if (col.school >= 0) return;
+  for (let i = 0; i < headers.length; i++) {
+    if (used[i]) continue;
+    const t = String(headers[i] ?? '').trim();
+    if (!SCHOOL_HEAD_RE.test(t)) continue;
+    if (!isTextColumn(rowsText, i)) continue;      // 全是数字 → 这是题目，不是队伍
+    col.school = i; used[i] = true; return;
+  }
+}
 
 function pickProblemCols(headers, used, rowsText) {
   const out = [];
   for (let i = 0; i < headers.length; i++) {
     if (used[i]) continue;
     if (NOT_PROBLEM_RE.test(String(headers[i] ?? '').trim())) continue;
-    const hasData = rowsText.some(r => String(r[i] ?? '').trim() !== '');
+    const colVals = rowsText.map(r => String(r[i] ?? '').trim());
+    const hasData = colVals.some(v => v !== '');
     if (!hasData) continue;                 // 整列空 → 导出时多出来的列，不是题目
+    // 一整列全是文字（队名 / 奖项 / 备注）→ 不可能是分数列
+    if (!colVals.some(isNumericCell)) continue;
     out.push(i);
   }
   return out;
@@ -1227,7 +1261,6 @@ function parseLemonHTML(html, fileName) {
 
   tryAssign('rank',   /^(排名|名次|rank|no\.?|#|序号)$/i);
   tryAssign('total',  /^(总分|总成绩|总计|total|score|成绩|得分)$/i);
-  tryAssign('school', /^(学校|单位|班级|school|team|org|组织)$/i);
   tryAssign('name',   /(名称|姓名|选手|用户|昵称|玩家|name|user|handle|账号|帐号)/i);
 
   if (col.name < 0) {
@@ -1247,6 +1280,8 @@ function parseLemonHTML(html, fileName) {
     const cells = [...tr.querySelectorAll('td,th')];
     return Array.from({ length: N }, (_, i) => cells[i] ? cells[i].textContent.trim() : '');
   });
+  // 队伍列必须在认出题目之前定下来（按"内容是文字"判定，题目列才不会被它抢走）
+  tryAssignSchool(headers, used, lemonCellTexts, col);
   col.problems = pickProblemCols(headers, used, lemonCellTexts);
   if (col.total < 0 && col.problems.length === 0) {
     throw new Error('没识别出任何题目列，也没有"总分"列 —— 表格列名可能不是常见写法');
@@ -1336,7 +1371,6 @@ function parseCCRCSV(text, fileName) {
 
   tryAssign('rank',   /^(排名|名次|rank|no\.?|#|序号)$/i);
   tryAssign('total',  /^(总分|总成绩|总计|total|score|成绩|得分)$/i);
-  tryAssign('school', /^(学校|单位|班级|school|team|org|组织)$/i);
   tryAssign('name',   /(名称|姓名|选手|用户|昵称|玩家|name|user|handle|账号|帐号)/i);
 
   if (col.name < 0) {
@@ -1349,6 +1383,8 @@ function parseCCRCSV(text, fileName) {
   }
   if (col.name < 0) throw new Error('无法识别"选手姓名"列');
 
+  // 队伍列按"内容是文字"判定，避免吞掉同名的题目列
+  tryAssignSchool(headers, used, grid.slice(1), col);
   // 只有"表头不是已知非题目字段、且整列有数据"的列才算题目
   col.problems = pickProblemCols(headers, used, grid.slice(1));
   if (col.total < 0 && col.problems.length === 0) {
