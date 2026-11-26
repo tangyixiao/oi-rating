@@ -130,6 +130,14 @@ table.tbl td.num,table.tbl th.num{text-align:right;font-variant-numeric:tabular-
   border-radius:5px;padding:0 5px;margin-left:4px;white-space:nowrap}
 [data-theme="dark"] .cheat-tag{color:#e8c39e;background:#3a2a1a;border-color:#6b4a2f}
 tr.cheat-row{background:rgba(139,69,19,.05)}
+/* 单题作弊：该题分数保持原值，只是标红 */
+.cheat-problem{color:#d40000;font-weight:700;text-decoration:underline dotted 1px}
+[data-theme="dark"] .cheat-problem{color:#ff6b6b}
+/* 勘误里每道题后面的「单题作弊」小勾（勾上后该题分数变红，分数值不变） */
+.pcheat{display:inline-flex;flex-direction:row;align-items:center;margin-left:5px;
+  cursor:pointer;user-select:none;vertical-align:middle}
+.pcheat input{width:auto;margin:0;cursor:pointer;accent-color:#d40000}
+td:has(.edit-pcheat:checked) input.edit-score{color:#d40000;font-weight:700}
 .empty{padding:40px;text-align:center;color:var(--muted)}
 .contest-item{border:1px solid var(--border);border-radius:8px;padding:12px 14px;
               margin-bottom:10px;background:#fff}
@@ -551,14 +559,35 @@ const LEGEND_THRESHOLD = 2600;
 /* ============================================================
  *  击杀作弊者（2026-11-19）
  *    · 作用范围：**只 ban 掉作弊的那一场**（比赛勘误里逐场标记）
- *    · 该场他的总分钉成 CHEAT_SCORE = -1，棕色显示，名次自然垫底
- *    · 但**照常参与排名与 Rating 结算**，所以那场他会大幅掉分
+ *    · 两种标法，效果都是「本场总分钉成 CHEAT_SCORE = -1、棕色显示、名次垫底」，
+ *      且照常参与排名与 Rating 结算（所以那场会大幅掉分）：
+ *        1) 整场作弊  r.cheated = true
+ *        2) 单题作弊  r.cheatedProblems = [题号下标…]
+ *           —— 该题分数**保持原值**、只是标红，总分照样钉 -1
  *    · 每场独立：另一场没标记就照常算
  * ============================================================ */
 const CHEAT_SCORE = -1;      // 作弊场的总分
 const CHEAT_COLOR = '#8b4513';   // 棕色（saddle brown）
+const CHEAT_PROBLEM_COLOR = '#d40000';   // 单题作弊：标红
 
-const isCheatRow = r => !!r && r.cheated === true;
+const isCheatAll = r => !!r && r.cheated === true;
+
+/* 单题作弊的题号集合（旧数据没有这个字段 → 空集合） */
+function cheatProblemSet(r) {
+  const out = new Set();
+  if (r && Array.isArray(r.cheatedProblems)) {
+    for (const j of r.cheatedProblems) {
+      const n = Number(j);
+      if (Number.isInteger(n) && n >= 0) out.add(n);
+    }
+  }
+  return out;
+}
+
+const isProblemCheated = (r, j) => cheatProblemSet(r).has(Number(j));
+
+/* 整场作弊或任一道题作弊 → 本场总分按 -1 处理 */
+const isCheatRow = r => isCheatAll(r) || cheatProblemSet(r).size > 0;
 
 function nameHtml(name, rating) {
   const raw = String(name ?? '');
@@ -1170,43 +1199,20 @@ function decodeBytes(buffer) {
 }
 
 /* ==== 题目列识别（Lemon / CCR 共用）====
-   表里没被 rank/name/school/total 认领的列，**不能一律当题目**：
+   表里没被 rank/name/total 认领的列，**不能一律当题目**：
    · CCR 导出的 CSV 末尾常有多余的空列（形如 `,,`），表头空、数据也空
    · 成绩表里还常有「罚时 / 提交次数 / AC 数 / 奖项」这类列
    以前这些都会被当成题目，名字用列号兜底 → 凭空多出 P5 / P6 / P7。
    这里只收「表头不是已知非题目字段、整列确实有数据、且出现过纯数字」的列。
 
-   ★ 学校/队伍类表头（school / team / org / 学校 / 班级 …）**故意不列在这里**：
-   它们由 tryAssignSchool 按「内容是文字」认领，认领不了的就该当题目 ——
-   否则一道题恰好叫 team / school / org 时会被静默吞掉（2026-11-23 修，
-   3.7 那场一道题就叫 team，整列被当队伍列吞掉，只存了 sale/berry/wota）。 */
+   ★ 学校/队伍列**不再单独认领**（2026-11-23 用户要求去掉）：
+   导入预览里那列从来没被存进存档（`results[].school` 一直是空的），
+   却因为按表头名字认领，把一道恰好叫 team 的题整列吞掉（3.7 那场少一题）。
+   现在队伍/学校列靠"整列是文字"这个条件自然落到题目列之外，不需要专门规则。 */
 const NOT_PROBLEM_RE = /^(罚时|罚时\(?min\)?|用时|时间|耗时|提交|提交次数|尝试|尝试次数|次数|ac|ac数|通过|通过题数|解决|解题数|得分率|正确率|奖项|奖|获奖|备注|rank|排名|名次|总分|总成绩|总计|total|score|成绩|得分|姓名|名称|选手|用户|昵称|玩家|name|user|handle|账号|帐号|序号|no\.?|#)$/i;
 
 /* 单元格是不是一个分数（纯数字） */
 const isNumericCell = v => /^-?\d+(\.\d+)?$/.test(String(v ?? '').trim());
-
-/* 这一列是不是"文字列"（队名 / 学校 / 奖项这类）：有数据且一个数字都没有。
-   用来防止「题目恰好叫 school / org / team」时被学校列吃掉。 */
-function isTextColumn(rowsText, i) {
-  const vals = rowsText.map(r => String(r[i] ?? '').trim()).filter(v => v !== '');
-  if (!vals.length) return false;
-  return !vals.some(isNumericCell);
-}
-
-/* 学校/队伍列：表头对得上 **且** 内容是文字。
-   ★ 只按表头匹配会被撞名坑死（2026-11-23：一道题就叫 team，整列被当队伍吞掉）。 */
-const SCHOOL_HEAD_RE = /^(学校|单位|班级|队伍|战队|团体|school|team|org|group|组织)$/i;
-
-function tryAssignSchool(headers, used, rowsText, col) {
-  if (col.school >= 0) return;
-  for (let i = 0; i < headers.length; i++) {
-    if (used[i]) continue;
-    const t = String(headers[i] ?? '').trim();
-    if (!SCHOOL_HEAD_RE.test(t)) continue;
-    if (!isTextColumn(rowsText, i)) continue;      // 全是数字 → 这是题目，不是队伍
-    col.school = i; used[i] = true; return;
-  }
-}
 
 function pickProblemCols(headers, used, rowsText) {
   const out = [];
@@ -1248,7 +1254,7 @@ function parseLemonHTML(html, fileName) {
   const { headers, trs } = best;
   const N = headers.length;
   const used = new Array(N).fill(false);
-  const col = { rank: -1, name: -1, school: -1, total: -1, problems: [] };
+  const col = { rank: -1, name: -1, total: -1, problems: [] };
 
   const tryAssign = (key, re) => {
     if (col[key] >= 0) return;
@@ -1280,8 +1286,6 @@ function parseLemonHTML(html, fileName) {
     const cells = [...tr.querySelectorAll('td,th')];
     return Array.from({ length: N }, (_, i) => cells[i] ? cells[i].textContent.trim() : '');
   });
-  // 队伍列必须在认出题目之前定下来（按"内容是文字"判定，题目列才不会被它抢走）
-  tryAssignSchool(headers, used, lemonCellTexts, col);
   col.problems = pickProblemCols(headers, used, lemonCellTexts);
   if (col.total < 0 && col.problems.length === 0) {
     throw new Error('没识别出任何题目列，也没有"总分"列 —— 表格列名可能不是常见写法');
@@ -1301,7 +1305,6 @@ function parseLemonHTML(html, fileName) {
       : col.problems.reduce((s, i) => s + num(texts[i]), 0);
     rows.push({
       name,
-      school: col.school >= 0 ? texts[col.school] : '',
       rank:   col.rank   >= 0 ? Math.round(num(texts[col.rank])) || null : null,
       total,
       scores: col.problems.map(i => num(texts[i])),
@@ -1359,7 +1362,7 @@ function parseCCRCSV(text, fileName) {
   const headers = grid[0].map(h => String(h).trim());
   const N = headers.length;
   const used = new Array(N).fill(false);
-  const col = { rank: -1, name: -1, school: -1, total: -1, problems: [] };
+  const col = { rank: -1, name: -1, total: -1, problems: [] };
 
   const tryAssign = (key, re) => {
     if (col[key] >= 0) return;
@@ -1383,8 +1386,6 @@ function parseCCRCSV(text, fileName) {
   }
   if (col.name < 0) throw new Error('无法识别"选手姓名"列');
 
-  // 队伍列按"内容是文字"判定，避免吞掉同名的题目列
-  tryAssignSchool(headers, used, grid.slice(1), col);
   // 只有"表头不是已知非题目字段、且整列有数据"的列才算题目
   col.problems = pickProblemCols(headers, used, grid.slice(1));
   if (col.total < 0 && col.problems.length === 0) {
@@ -1401,7 +1402,6 @@ function parseCCRCSV(text, fileName) {
       : col.problems.reduce((s, i) => s + num(line[i]), 0);
     rows.push({
       name,
-      school: col.school >= 0 ? String(line[col.school] ?? '').trim() : '',
       rank: col.rank >= 0 ? Math.round(num(line[col.rank])) || null : null,
       total,
       scores: col.problems.map(i => num(line[i])),
@@ -1475,7 +1475,6 @@ function renderPreview() {
   const head = `<tr>
     <th class="num">#</th>
     <th>原始姓名</th>
-    <th>学校</th>
     <th class="num">总分</th>
     ${pending.problems.map(p => `<th class="num">${esc(p)}</th>`).join('')}
     <th>匹配选手</th>
@@ -1491,7 +1490,6 @@ function renderPreview() {
     return `<tr>
       <td class="num">${i + 1}</td>
       <td><b>${esc(r.name)}</b></td>
-      <td>${esc(r.school || '-')}</td>
       <td class="num"><b>${r.total}</b></td>
       ${r.scores.map(s => `<td class="num">${s}</td>`).join('')}
       <td><select class="sel-match" data-idx="${i}">${opts.join('')}</select></td>
@@ -2572,10 +2570,15 @@ function showContest(id) {
             const unrated = isHidden(r.userId);
             const cheated = isCheatRow(r);
             // 每题满分 100，按分数段上色（0-29 红 / 30-49 橙 / 50-79 黄 / 80-100 绿）
-            const scoreCells = (r.scores || []).map(s =>
-              `<td class="num" style="color:${scoreColor(s)}">${s}</td>`).join('');
-            const nameCell = `<td><b style="cursor:pointer" data-goto-player="${r.userId}" title="点一下看 TA 的画像">${nameHtml(u ? u.name : r.rawName, unrated ? null : (r.ratingAfter ?? u?.rating ?? 0))}</b>${
-              cheated ? ` <span class="cheat-tag" title="作弊：本场总分 -1">🔨 作弊</span>` : ''}</td>`;
+            // 单题作弊的格子标红加粗，但分数保持原值
+            const scoreCells = (r.scores || []).map((s, j) =>
+              isProblemCheated(r, j)
+                ? `<td class="num"><b class="cheat-problem" title="本题作弊：分数保留，本场总分 -1">${s}</b></td>`
+                : `<td class="num" style="color:${scoreColor(s)}">${s}</td>`).join('');
+            const cheatTag = cheated
+              ? ` <span class="cheat-tag" title="作弊：本场总分 -1">🔨 作弊</span>`
+              : '';
+            const nameCell = `<td><b style="cursor:pointer" data-goto-player="${r.userId}" title="点一下看 TA 的画像">${nameHtml(u ? u.name : r.rawName, unrated ? null : (r.ratingAfter ?? u?.rating ?? 0))}</b>${cheatTag}</td>`;
             const rankCell = `<td class="num">${shownRank.get(r)}</td>`;
             // 作弊场：总分用棕色 -1（不管各题分填了什么）
             const totalCell = cheated
@@ -2678,8 +2681,11 @@ function contestShareData(c) {
         tier: ratingTier(rating),
         total: r.total,
         cheated,
+        cheatedAll: isCheatAll(r),
         scores: (r.scores || []).map(s => Number(s) || 0),
         scoreColors: (r.scores || []).map(s => scoreColor(s)),
+        // 单题作弊：该题分数保留原值，只是标红
+        cheatedScores: (r.scores || []).map((_, j) => isProblemCheated(r, j)),
         perf: r.performance == null ? null : Math.round(r.performance),
         perfTier: ratingTier(r.performance == null ? null : Math.round(r.performance)),
         before: r.ratingBefore ?? null,
@@ -2750,6 +2756,9 @@ tbody tr:hover{background:rgba(37,99,235,.05)}
   border-radius:5px;padding:0 5px;margin-left:4px;white-space:nowrap}
 [data-theme="dark"] .cheat-tag{color:#e8c39e;background:#3a2a1a;border-color:#6b4a2f}
 tr.cheat-row{background:rgba(139,69,19,.05)}
+/* 单题作弊：该题分数保持原值，只是标红 */
+.cheat-problem{color:#d40000;font-weight:700;text-decoration:underline dotted 1px}
+[data-theme="dark"] .cheat-problem{color:#ff6b6b}
 .rating-cell{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;width:100%}
 .rating-bar{display:inline-block;width:3px;height:14px;border-radius:2px;vertical-align:middle}
 .legend-name{font-weight:800;letter-spacing:.3px;text-shadow:0 0 1px rgba(220,0,0,.45)}
@@ -2881,6 +2890,8 @@ function render(){
     c.problems.forEach(function(p, j){
       var s = r.scores[j];
       if (s == null) body += '<td class="num muted">-</td>';
+      else if (r.cheatedScores && r.cheatedScores[j])
+        body += '<td class="num"><b class="cheat-problem" title="本题作弊：分数保留，本场总分 -1">' + s + '</b></td>';
       else body += '<td class="num" style="color:' + r.scoreColors[j] + '">' + s + '</td>';
     });
     if (r.unrated) {
@@ -2990,12 +3001,16 @@ function editContest(id) {
     return c.problems.map((_, j) => {
       const v = (r.scores || [])[j];
       return `<td class="num"><input type="number" class="edit-score" data-j="${j}"
-                value="${v == null ? 0 : v}" style="width:70px;text-align:right;padding:3px 6px"></td>`;
+                value="${v == null ? 0 : v}" style="width:58px;text-align:right;padding:3px 6px"
+                ><label class="pcheat" title="本题作弊：分数保留原值、标红，本场总分固定 -1"
+                ><input type="checkbox" class="edit-pcheat" data-j="${j}"${
+                  isProblemCheated(r, j) ? ' checked' : ''}></label></td>`;
     }).join('');
   };
 
   const html = `
-    <p class="muted">直接修改${hasDetail ? '各题分数' : '总分'}后点"保存并重算"。勾上「🔨 作弊」则该选手本场总分固定为 -1。</p>
+    <p class="muted">直接修改${hasDetail ? '各题分数' : '总分'}后点"保存并重算"。勾上「🔨 作弊」则该选手本场总分固定为 -1${
+      hasDetail ? '；题目后面的方框是单题作弊，该题分数保留原值只标红' : ''}。</p>
     ${hasDetail ? '' : `<p class="muted" style="color:#b45309">
       ⚠ 这场比赛<b>没有各题分数</b>（导入时只有总分），所以这里只能改<b>总分</b>。
     </p>`}
@@ -3027,7 +3042,8 @@ function editContest(id) {
         <tbody id="editTbody">
           ${rows.map((r, i) => {
             const u = findUser(r.userId);
-            const cheated = isCheatRow(r);
+            // 「🔨 作弊」这一列是整场作弊；单题作弊由各题格子里的 🔨 单独勾
+            const cheated = isCheatAll(r);
             return `<tr data-uid="${r.userId}" data-name="${esc(u ? u.name : r.rawName)}"${cheated ? ' data-cheated="1"' : ''}>
               <td class="num idx">${i+1}</td>
               <td><b>${nameHtml(u ? u.name : r.rawName, u ? u.rating : 0)}</b></td>
@@ -3053,13 +3069,17 @@ function editContest(id) {
 
   const tbody = $('editTbody');
 
-  // 勾了「作弊」的行，总分列显示棕色的 -1；没勾的显示各题求和（没有明细时是输入框）
+  // 这一行是否被判作弊（整场勾选 或 至少一道题勾了单题作弊）
+  const rowIsCheat = tr =>
+    tr.dataset.cheated === '1' ||
+    !!tr.querySelector('input.edit-pcheat:checked');
+
+  // 被判作弊的行，总分列显示棕色的 -1；否则显示各题求和（没有明细时是输入框）
   const refreshCheatCell = tr => {
     if (!hasDetail) return;                       // 只有总分模式：不覆盖用户手填的总分
     const cell = tr.querySelector('.total-cell');
     if (!cell) return;
-    const cheated = tr.dataset.cheated === '1';
-    cell.innerHTML = cheated
+    cell.innerHTML = rowIsCheat(tr)
       ? `<b class="cheat-score" title="作弊：本场总分 -1">${CHEAT_SCORE}</b>`
       : `<b>${[...tr.querySelectorAll('input.edit-score')]
             .reduce((a, el) => a + (parseFloat(el.value) || 0), 0)}</b>`;
@@ -3084,6 +3104,13 @@ function editContest(id) {
       refreshCheatCell(tr);
       recalcTotals();
     });
+    // 单题作弊：勾上任何一题，本场总分同样钉 -1（该题分数保持原值）
+    tr.querySelectorAll('input.edit-pcheat').forEach(box =>
+      box.addEventListener('change', () => {
+        refreshCheatCell(tr);
+        recalcTotals();
+      })
+    );
     tr.querySelector('button[data-act="rm"]').onclick = () => {
       tr.remove(); recalcTotals();
     };
@@ -3109,7 +3136,7 @@ function editContest(id) {
         ? '<td class="num total-cell"><b>0</b></td>'
         : `<td class="num"><input type="number" class="edit-total" value="0" step="1" style="width:90px;text-align:right;padding:3px 6px"></td>`}
       ${hasDetail
-        ? c.problems.map((_, j) => `<td class="num"><input type="number" class="edit-score" data-j="${j}" value="0" style="width:70px;text-align:right;padding:3px 6px"></td>`).join('')
+        ? c.problems.map((_, j) => `<td class="num"><input type="number" class="edit-score" data-j="${j}" value="0" style="width:58px;text-align:right;padding:3px 6px"><label class="pcheat" title="本题作弊：分数保留原值、标红，本场总分固定 -1"><input type="checkbox" class="edit-pcheat" data-j="${j}"></label></td>`).join('')
         : ''}
       <td style="text-align:center">
         <input type="checkbox" class="edit-cheat" title="判定这一场作弊：总分固定 -1，照常参与排名与 Rating 结算">
@@ -3137,7 +3164,13 @@ function editContest(id) {
       seen.add(uid);
       const old = c.results.find(x => x.userId === uid);
       const cheatBox = tr.querySelector('input.edit-cheat');
-      const cheated = !!(cheatBox && cheatBox.checked);
+      const cheatedAll = !!(cheatBox && cheatBox.checked);
+      // 单题作弊：勾了哪几题（分数保持原值）
+      const cheatedProblems = [...tr.querySelectorAll('input.edit-pcheat')]
+        .filter(el => el.checked)
+        .map(el => parseInt(el.dataset.j, 10))
+        .filter(n => Number.isInteger(n) && n >= 0)
+        .sort((a, b) => a - b);
       let scores, total;
       if (hasDetail) {
         scores = [...tr.querySelectorAll('input.edit-score')].map(el => parseFloat(el.value) || 0);
@@ -3153,12 +3186,13 @@ function editContest(id) {
         rank: 0, total, scores,
         performance: null, ratingBefore: null, ratingAfter: null, delta: null
       };
-      if (cheated) {
-        // 保留真实总分，重算时会钉成 -1；取消勾选后能精确还原
+      if (cheatedProblems.length) row.cheatedProblems = cheatedProblems;
+      if (cheatedAll || cheatedProblems.length) {
+        // 保留真实总分，重算时会钉成 -1；取消作弊后能精确还原
         row.cheatRawTotal = total;
         row.total = CHEAT_SCORE;
-        row.cheated = true;
       }
+      if (cheatedAll) row.cheated = true;
       newResults.push(row);
     });
 
