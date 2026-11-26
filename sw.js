@@ -4,7 +4,7 @@
  *   · 其它静态资源：网络优先，失败时用缓存（离线也能打开页面）
  * 改版时把 VERSION 加一，旧缓存会自动清掉。
  */
-const VERSION = 'sxyz-rating-v2';   // 2026-10-28 隐藏选手功能：加一，旧缓存自动清掉
+const VERSION = 'sxyz-rating-v3';   // 2026-11-26 单题作弊 + 删除学校栏：加一，旧缓存自动清掉
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
